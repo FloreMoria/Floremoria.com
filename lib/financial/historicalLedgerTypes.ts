@@ -13,6 +13,11 @@ export const LEDGER_CATEGORIES = [
      * IVA a debito = IVA a credito; effetto nullo su ricavi e sul risultato.
      */
     'AUTOFATTURE_REVERSE_CHARGE',
+    /**
+     * Erario c/IVA — solo patrimoniale (debito da corrispettivi / credito da fatture).
+     * Escluso dal CE: non altera il risultato economico.
+     */
+    'ERARIO_C_IVA',
     'PAYPAL_PAYOUT',
     /** Giroconto gateway → banca Fineco: non è ricavo di vendita. */
     'TRASFERIMENTO_INTERNO',
@@ -114,6 +119,15 @@ export type HistoricalPnl = {
     cashOutflowCents?: number;
     cashGatewayTransferCents?: number;
     cashBankBalanceCents?: number;
+    /** Autofatture TD17 sbilanciate (lista di lavoro). */
+    autofattureRcWorkList?: Array<{
+        eventKey: string;
+        vendor: string;
+        date: string | null;
+        ivaDebitoCents: number;
+        ivaCreditoCents: number;
+        reason: string;
+    }>;
 };
 
 export function fiscalParts(d: Date): {
@@ -230,6 +244,7 @@ export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     CONTRIBUTI_ESERCIZIO: 'Contributi pubblici (altri ricavi — non vendite)',
     RIMBORSI: 'Rimborsi ricevuti',
     AUTOFATTURE_REVERSE_CHARGE: 'Autofatture reverse charge (TD17 — effetto CE nullo)',
+    ERARIO_C_IVA: 'Erario c/IVA (patrimoniale)',
     PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
     TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',
     DA_CLASSIFICARE: 'Da classificare (partite aperte)',

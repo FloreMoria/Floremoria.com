@@ -22,6 +22,8 @@ export type DoubleEntryDraft = {
 /** Piano conti sintetico CEE / e-commerce FloreMoria. */
 export const CEE_CHART_OF_ACCOUNTS = [
     { code: '50100', name: 'Banca FinecoBank (cassa operativa)', nature: 'attivo' },
+    { code: '50200', name: 'Cassa PayPal (wallet gateway)', nature: 'attivo' },
+    { code: '17100', name: 'Conto transitorio Gateway (giroconto)', nature: 'attivo' },
     { code: '60100', name: 'Ricavi da vendite (corrispettivi)', nature: 'ricavo' },
     { code: '70100', name: 'Costi produzione fioristi partner', nature: 'costo' },
     { code: '70200', name: 'Commissioni gateway (Stripe/PayPal)', nature: 'costo' },
@@ -75,6 +77,206 @@ export function draftStripeSaleEntry(params: {
         lines,
         balanced: isBalanced(lines),
     };
+}
+
+/**
+ * Incasso PayPal (evento primario CAPTURE / T0006): ricavo lordo + fee, netto su cassa PayPal.
+ * Non usare per TRANSFER/WITHDRAWAL (vedi draftPaypalTransitGirocontoEntry).
+ */
+export function draftPaypalSaleEntry(params: {
+    date: string;
+    orderRef: string;
+    grossCents: number;
+    feeCents: number;
+    netCents: number;
+}): DoubleEntryDraft {
+    const lines: DoubleEntryLine[] = [
+        {
+            accountCode: '50200',
+            accountName: 'Cassa PayPal (wallet gateway)',
+            dareCents: params.netCents,
+            avereCents: 0,
+        },
+        {
+            accountCode: '70200',
+            accountName: 'Commissioni gateway',
+            dareCents: params.feeCents,
+            avereCents: 0,
+        },
+        {
+            accountCode: '60100',
+            accountName: 'Ricavi da vendite',
+            dareCents: 0,
+            avereCents: params.grossCents,
+        },
+    ];
+    return {
+        description: `Incasso ordine ${params.orderRef} via PayPal`,
+        date: params.date,
+        lines,
+        balanced: isBalanced(lines),
+    };
+}
+
+/**
+ * Giroconto PayPal: sweep / withdrawal / transfer / pareggio saldo (±netto).
+ * Dare/avere solo tra cassa PayPal, transito gateway e banca — NON tocca 60100 né costi operativi.
+ *
+ * Esempio sweep wallet → banca:
+ *   Dare 17100 Transito / Avere 50200 PayPal  (uscita wallet)
+ *   Dare 50100 Fineco   / Avere 17100 Transito (accredito banca)
+ */
+export function draftPaypalTransitGirocontoEntry(params: {
+    date: string;
+    amountCents: number;
+    direction: 'wallet_to_bank' | 'bank_to_wallet' | 'internal_balance';
+    reference?: string;
+}): DoubleEntryDraft {
+    const amount = Math.abs(params.amountCents);
+    const ref = params.reference ? ` ${params.reference}` : '';
+    let lines: DoubleEntryLine[];
+    let description: string;
+
+    if (params.direction === 'wallet_to_bank') {
+        description = `Giroconto PayPal → Fineco${ref}`;
+        lines = [
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '50200',
+                accountName: 'Cassa PayPal (wallet gateway)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+            {
+                accountCode: '50100',
+                accountName: 'Banca FinecoBank (cassa operativa)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+        ];
+    } else if (params.direction === 'bank_to_wallet') {
+        description = `Giroconto Fineco → PayPal (provvista)${ref}`;
+        lines = [
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '50100',
+                accountName: 'Banca FinecoBank (cassa operativa)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+            {
+                accountCode: '50200',
+                accountName: 'Cassa PayPal (wallet gateway)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+        ];
+    } else {
+        // Pareggio saldo interno (±netto speculare): non altera fatturato né costi
+        description = `Giroconto interno PayPal (pareggio saldo)${ref}`;
+        lines = [
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '50200',
+                accountName: 'Cassa PayPal (wallet gateway)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+            {
+                accountCode: '50200',
+                accountName: 'Cassa PayPal (wallet gateway)',
+                dareCents: amount,
+                avereCents: 0,
+            },
+            {
+                accountCode: '17100',
+                accountName: 'Conto transitorio Gateway (giroconto)',
+                dareCents: 0,
+                avereCents: amount,
+            },
+        ];
+    }
+
+    return {
+        description,
+        date: params.date,
+        lines,
+        balanced: isBalanced(lines),
+    };
+}
+
+/**
+ * Riconosce movimenti PayPal da trattare come giroconto (non ricavo/costo).
+ * Allineato a T2002/T5000/T5001 e label TRANSFER/WITHDRAWAL.
+ */
+export function isPaypalGirocontoMovement(params: {
+    eventCode?: string | null;
+    description?: string | null;
+    grossCents?: number;
+    feeCents?: number;
+}): boolean {
+    const code = String(params.eventCode || '')
+        .trim()
+        .toUpperCase();
+    if (
+        code === 'T2000' ||
+        code === 'T2001' ||
+        code === 'T2002' ||
+        code === 'T2003' ||
+        code === 'T0400' ||
+        code === 'T0401' ||
+        code === 'T0403' ||
+        code === 'T5000' ||
+        code === 'T5001' ||
+        code === 'T0300' ||
+        code === 'T0301' ||
+        code === 'T0302'
+    ) {
+        return true;
+    }
+    const desc = String(params.description || '');
+    if (
+        /trasferimento|withdrawal|payout|bonifico|user initiated|prelievo|transfer|auto[\s-]?sweep|denaro raccolto|importo pagato/i.test(
+            desc
+        )
+    ) {
+        return true;
+    }
+    // Generico "PayPal {id}" senza fee = spesso ±netto speculare
+    if (
+        /^paypal\s+[A-Z0-9]+$/i.test(desc.trim()) &&
+        (!params.feeCents || params.feeCents === 0)
+    ) {
+        return true;
+    }
+    return false;
 }
 
 /** Pagamento fornitore / fiorista. */

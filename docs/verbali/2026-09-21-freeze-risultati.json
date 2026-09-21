@@ -1,16 +1,36 @@
 {
-  "label": "FREEZE_UFFICIALE_2026-09-21_DEDUPE_FATTURA_RIMBORSI",
-  "at": "2026-09-21T15:48:57.316Z",
+  "label": "FREEZE_UFFICIALE_2026-09-21_ERARIO_IVA_C15",
+  "at": "2026-09-21T16:29:06.048Z",
   "replaces": null,
   "engineNotes": [
     "Dedupe costi: fattura passiva prevale sul bonifico (regolamento).",
     "Rimborsi cliente (USCITA) riducono ricavi/vendite, non aumentano i costi.",
-    "Autofatture TD17 → AUTOFATTURE_REVERSE_CHARGE (effetto CE nullo; IVA debito/credito).",
-    "PayPal HAYUM vendite in RICAVI_VENDITE (non più ARCH_PAYPAL_NOT_GATEWAY)."
+    "Autofatture TD17: IVA letta dai documenti; credito solo fino al debito; sbilanci → work-list.",
+    "Erario c/IVA patrimoniale (debito=corrispettivi, credito=fatture); fuori dal CE.",
+    "C15: corrispettivi/fatture ↔ Erario; non blocca Registro Corrispettivi commercialista."
   ],
   "checks": {
     "dcStudioKeepsInvoice": true,
     "dcStudioDropsBank": true,
+    "c15AllGreen": true,
+    "c15": [
+      {
+        "quarter": "1",
+        "passed": true,
+        "detail": "C15 OK T1 2026: Erario debito=94.43 = corr; credito=5.64 = fatture."
+      },
+      {
+        "quarter": "2",
+        "passed": true,
+        "detail": "C15 OK T2 2026: Erario debito=113.29 = corr; credito=0.00 = fatture."
+      },
+      {
+        "quarter": "3",
+        "passed": true,
+        "detail": "C15 OK T3 2026: Erario debito=195.97 = corr; credito=34.38 = fatture."
+      }
+    ],
+    "arcWorkListCount": 0,
     "dcStudioLedgerRows": [
       {
         "sourceKey": "BANK_LINE:cmt311c5f000sl4041s82u7pg",
@@ -27,39 +47,45 @@
     ]
   },
   "cents": {
-    "ricaviLordi": 885243,
+    "ricaviLordi": 865574,
     "venditeCaratteristiche": 400080,
     "altriRicavi": 3281,
     "contributiEsercizio": 459766,
-    "rimborsiInRicaviNet": 8121,
-    "costiFioristi": 268762,
-    "costiFatturePassiveSdi": 613409,
-    "costiSaas": 108004,
-    "costiOperativi": 217564,
-    "oneriBancari": 37785,
-    "ebitda": -322496,
-    "risultatoEsercizio": -360281,
-    "risultatoGestione": -820047,
-    "ivaDebito": 26289,
-    "ivaCredito": 119406,
+    "rimborsiInRicaviNet": -11548,
+    "costiFioristi": 141662,
+    "costiFatturePassiveSdi": 569409,
+    "costiSaas": 88049,
+    "costiOperativi": 142026,
+    "oneriBancari": 25309,
+    "ebitda": -75572,
+    "risultatoEsercizio": -100881,
+    "risultatoGestione": -560647,
+    "ivaDebito": 25403,
+    "ivaCredito": 112385,
+    "erarioIvaDebito": 40369,
+    "erarioIvaCredito": 4002,
+    "erarioIvaSaldo": 36367,
     "cashBank": 3229753
   },
   "euro": {
-    "ricaviLordi": "8852,43",
+    "ricaviLordi": "8655,74",
     "venditeCaratteristiche": "4000,80",
     "altriRicavi": "32,81",
     "contributiEsercizio": "4597,66",
-    "rimborsiInRicaviNet": "81,21",
-    "costiFioristi": "2687,62",
-    "costiFatturePassiveSdi": "6134,09",
-    "costiSaas": "1080,04",
-    "costiOperativi": "2175,64",
-    "oneriBancari": "377,85",
-    "ebitda": "-3224,96",
-    "risultatoEsercizio": "-3602,81",
-    "risultatoGestione": "-8200,47",
-    "ivaDebito": "262,89",
-    "ivaCredito": "1194,06",
+    "rimborsiInRicaviNet": "-115,48",
+    "costiFioristi": "1416,62",
+    "costiFatturePassiveSdi": "5694,09",
+    "costiSaas": "880,49",
+    "costiOperativi": "1420,26",
+    "oneriBancari": "253,09",
+    "ebitda": "-755,72",
+    "risultatoEsercizio": "-1008,81",
+    "risultatoGestione": "-5606,47",
+    "ivaDebito": "254,03",
+    "ivaCredito": "1123,85",
+    "erarioIvaDebito": "403,69",
+    "erarioIvaCredito": "40,02",
+    "erarioIvaSaldo": "363,67",
     "cashBank": "32.297,53"
   }
 }

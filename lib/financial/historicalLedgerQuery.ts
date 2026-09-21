@@ -188,6 +188,8 @@ export async function computeHistoricalPnl(opts: {
             documentRef: true,
             accountingDate: true,
             metadataJson: true,
+            counterpartyName: true,
+            description: true,
         },
     });
 
@@ -209,7 +211,28 @@ export async function computeHistoricalPnl(opts: {
     });
     const poseRefs = await loadPrepaidPoseRefSets();
     const withoutPoseRevenue = cleaned.filter((r) => !isPrepaidPoseRevenueEntry(r, poseRefs));
-    const usable = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
+
+    // TD17: bilancia sui documenti grezzi (prima della gerarchia, che può sopprimere un lato).
+    const {
+        balanceAutofattureReverseCharge,
+        summarizeArcBalances,
+    } = await import('@/lib/financial/autofattureReverseCharge');
+    const arcBalances = balanceAutofattureReverseCharge(
+        withoutPoseRevenue.filter((r) => r.category === 'AUTOFATTURE_REVERSE_CHARGE') as never[]
+    );
+    const arcSum = summarizeArcBalances(arcBalances);
+    const autofattureRcWorkList = arcSum.workList.map((b) => ({
+        eventKey: b.eventKey,
+        vendor: b.vendor,
+        date: b.date,
+        ivaDebitoCents: b.ivaDebitoCents,
+        ivaCreditoCents: b.ivaCreditoCents,
+        reason: b.workListReason || 'sbilancio',
+    }));
+
+    // Erario fuori dalla gerarchia costi/ricavi (non deve influenzare dedupe CE).
+    const forHierarchy = withoutPoseRevenue.filter((r) => r.category !== 'ERARIO_C_IVA');
+    const usable = applyFiscalAuthorityHierarchy(forHierarchy);
 
     // Fase 3: escludi ledger collegati a spese in QUARANTINE/REJECTED
     const expenseIds = [
@@ -249,28 +272,17 @@ export async function computeHistoricalPnl(opts: {
     let contributiEsercizioCents = 0;
     let rimborsiInRicaviCents = 0;
 
-    // TD17 reverse charge: effetto CE nullo; IVA debito = credito una sola volta per evento.
-    const arcVatByEvent = new Map<string, number>();
-    for (const r of fiscalUsable) {
-        if (r.category !== 'AUTOFATTURE_REVERSE_CHARGE') continue;
-        const m = (r.sourceKey || '').match(/:(cmt[a-z0-9]+)/i);
-        const eventKey =
-            m?.[1] ||
-            (r.documentRef || '').trim() ||
-            r.sourceId ||
-            r.id;
-        const v = Math.abs(r.vatCents || 0) || Math.abs(r.totalCents);
-        const prev = arcVatByEvent.get(eventKey) || 0;
-        if (v > prev) arcVatByEvent.set(eventKey, v);
-    }
-    for (const v of arcVatByEvent.values()) {
-        ivaDebitoCents += v;
-        ivaCreditoCents += v;
-    }
+    // IVA ARC documentale (credito solo fino al debito).
+    ivaDebitoCents += arcSum.ivaDebitoCents;
+    ivaCreditoCents += arcSum.ivaCreditoDetraibileCents;
 
     for (const r of fiscalUsable) {
         // Autofatture TD17: già conteggiate in IVA sopra; fuori ricavi/costi.
         if (r.category === 'AUTOFATTURE_REVERSE_CHARGE') {
+            continue;
+        }
+        // Erario c/IVA: solo patrimoniale — non tocca il CE.
+        if (r.category === 'ERARIO_C_IVA') {
             continue;
         }
 
@@ -415,6 +427,7 @@ export async function computeHistoricalPnl(opts: {
         cashOutflowCents,
         cashGatewayTransferCents,
         cashBankBalanceCents,
+        autofattureRcWorkList,
     };
 }
 

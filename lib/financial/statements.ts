@@ -5,6 +5,10 @@
 
 import prisma from '@/lib/prisma';
 import { computeHistoricalPnl } from '@/lib/financial/historicalLedgerQuery';
+import {
+    readErarioIvaFromLedger,
+    syncErarioIvaYear,
+} from '@/lib/financial/erarioIva';
 
 export interface ContoEconomico {
     ricaviVenditeCents: number;
@@ -33,6 +37,12 @@ export interface StatoPatrimoniale {
     creditiClientiCents: number;
     debitiFornitoriCents: number;
     debitiTributariCents: number;
+    /** IVA a debito da registro corrispettivi (Erario c/IVA — passivo). */
+    erarioIvaDebitoCents: number;
+    /** IVA a credito da fatture passive (Erario c/IVA — attivo). */
+    erarioIvaCreditoCents: number;
+    /** Debito − credito Erario (passività netta se > 0). */
+    erarioIvaSaldoCents: number;
     /** Utile/perdita di esercizio (senza capitale sociale hardcoded). */
     patrimonioNettoCents: number;
     /** Null finché non esiste anagrafica societaria a DB. */
@@ -60,6 +70,13 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
     const capitaleSocialeCents: number | null = null;
 
     const pnl = await computeHistoricalPnl({ fiscalYear: year });
+
+    // Scritture patrimoniali Erario (idempotenti) — non toccano il CE.
+    await syncErarioIvaYear(year);
+    const erario = await readErarioIvaFromLedger(year);
+    const erarioIvaDebitoCents = erario.debitoCents;
+    const erarioIvaCreditoCents = erario.creditoCents;
+    const erarioIvaSaldoCents = erarioIvaDebitoCents - erarioIvaCreditoCents;
 
     const unpaidOrders = await prisma.order.findMany({
         where: { isTest: false, status: { in: ['ACCEPTED', 'PENDING'] }, deletedAt: null },
@@ -128,7 +145,12 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
             cassaBancaCents,
             creditiClientiCents,
             debitiFornitoriCents,
-            debitiTributariCents: Math.max(0, pnl.ivaNettaCents) + iresCents + irapCents,
+            // Debiti tributari = saldo Erario IVA (se a debito) + stime IRES/IRAP
+            debitiTributariCents:
+                Math.max(0, erarioIvaSaldoCents) + iresCents + irapCents,
+            erarioIvaDebitoCents,
+            erarioIvaCreditoCents,
+            erarioIvaSaldoCents,
             // Solo risultato di esercizio finché manca anagrafica capitale.
             patrimonioNettoCents: utileNettoCents,
             capitaleSocialeCents,

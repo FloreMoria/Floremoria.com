@@ -1,0 +1,679 @@
+{
+  "at": "2026-09-21T16:10:08.917Z",
+  "readOnly": true,
+  "v1": {
+    "summary": {
+      "nEvents": 23,
+      "nOk": 21,
+      "nMancaDebito": 1,
+      "nMancaCredito": 0,
+      "nSquilibrio": 1,
+      "sumDebito": 25158,
+      "sumCredito": 25717,
+      "rawLedgerRows": 45
+    },
+    "rows": [
+      {
+        "eventKey": "cmtoj5evh0001l504f5zzewqg",
+        "vendor": "Google Ireland Ltd",
+        "date": "2026-02-18",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 2542,
+        "ivaCreditoCents": 2542,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtoj5evh0001l504f5zzewqg"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtoj5evh0001l504f5zzewqg"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 2542,
+        "creditoSumAllUscita": 2542
+      },
+      {
+        "eventKey": "cmtog8mw80009ju04d57gyc38",
+        "vendor": "Cursor",
+        "date": "2026-05-02",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1775,
+        "ivaCreditoCents": 1775,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtog8mw80009ju04d57gyc38"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtog8mw80009ju04d57gyc38"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1775,
+        "creditoSumAllUscita": 1775
+      },
+      {
+        "eventKey": "cmtq1yh9n0001l904ilf1sscs",
+        "vendor": "Anthropic, PBC",
+        "date": "2026-05-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1800,
+        "ivaCreditoCents": 1800,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq1yh9n0001l904ilf1sscs"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq1yh9n0001l904ilf1sscs"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1800,
+        "creditoSumAllUscita": 1800
+      },
+      {
+        "eventKey": "000001-2026-EST",
+        "vendor": "Autofattura TD17 Stripe Payments Europe Limited n. 000001-2026-EST",
+        "date": "2026-05-31",
+        "nEntrata": 0,
+        "nUscita": 1,
+        "ivaDebitoCents": 0,
+        "ivaCreditoCents": 314,
+        "saldoCents": -314,
+        "hasDebito": false,
+        "hasCredito": true,
+        "entKeys": [],
+        "uscKeys": [
+          "JSON_ENTRY:entry_autofattura_cmt2qaxdf0000kw04g78v1vof"
+        ],
+        "note": "MANCA DEBITO",
+        "debitoSumAllEntrata": 0,
+        "creditoSumAllUscita": 314
+      },
+      {
+        "eventKey": "cmt2qaxdf0000kw04g78v1vof",
+        "vendor": "Stripe Payments Europe Limited",
+        "date": "2026-05-31",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 69,
+        "ivaCreditoCents": 314,
+        "saldoCents": -245,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmt2qaxdf0000kw04g78v1vof"
+        ],
+        "uscKeys": [
+          "AUTOFATTURA_GEN:cmt2qaxdf0000kw04g78v1vof"
+        ],
+        "note": "SQUILIBRIO Δ€-2,45",
+        "debitoSumAllEntrata": 69,
+        "creditoSumAllUscita": 314
+      },
+      {
+        "eventKey": "cmt2qd1580001lh04arj7bch9",
+        "vendor": "Stripe Payments Europe",
+        "date": "2026-05-31",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 314,
+        "ivaCreditoCents": 314,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmt2qd1580001lh04arj7bch9"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmt2qd1580001lh04arj7bch9"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 314,
+        "creditoSumAllUscita": 314
+      },
+      {
+        "eventKey": "cmtogb73y000cju04why8zkxr",
+        "vendor": "Cursor",
+        "date": "2026-06-02",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1775,
+        "ivaCreditoCents": 1775,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtogb73y000cju04why8zkxr"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtogb73y000cju04why8zkxr"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1775,
+        "creditoSumAllUscita": 1775
+      },
+      {
+        "eventKey": "cmtq20h4w0001ju04nr96wec6",
+        "vendor": "Anthropic, PBC",
+        "date": "2026-06-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1800,
+        "ivaCreditoCents": 1800,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq20h4w0001ju04nr96wec6"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq20h4w0001ju04nr96wec6"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1800,
+        "creditoSumAllUscita": 1800
+      },
+      {
+        "eventKey": "cmtolhsxp000djx040j2aho1b",
+        "vendor": "Apple",
+        "date": "2026-06-16",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 81,
+        "ivaCreditoCents": 81,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtolhsxp000djx040j2aho1b"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtolhsxp000djx040j2aho1b"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 81,
+        "creditoSumAllUscita": 81
+      },
+      {
+        "eventKey": "cmtoghe9u000fju04nucsg7ca",
+        "vendor": "Cursor",
+        "date": "2026-07-02",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1775,
+        "ivaCreditoCents": 1775,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtoghe9u000fju04nucsg7ca"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtoghe9u000fju04nucsg7ca"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1775,
+        "creditoSumAllUscita": 1775
+      },
+      {
+        "eventKey": "cmtq222ts0004ju04b6k8h13p",
+        "vendor": "Anthropic, PBC",
+        "date": "2026-07-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1800,
+        "ivaCreditoCents": 1800,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq222ts0004ju04b6k8h13p"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq222ts0004ju04b6k8h13p"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1800,
+        "creditoSumAllUscita": 1800
+      },
+      {
+        "eventKey": "cmtolg6uc0009jx04tz5nwywb",
+        "vendor": "Apple",
+        "date": "2026-07-16",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 81,
+        "ivaCreditoCents": 81,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtolg6uc0009jx04tz5nwywb"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtolg6uc0009jx04tz5nwywb"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 81,
+        "creditoSumAllUscita": 81
+      },
+      {
+        "eventKey": "cmtoinal30001l204bqg2or55",
+        "vendor": "Stripe Payments Europe",
+        "date": "2026-07-31",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 570,
+        "ivaCreditoCents": 570,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtoinal30001l204bqg2or55"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtoinal30001l204bqg2or55"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 570,
+        "creditoSumAllUscita": 570
+      },
+      {
+        "eventKey": "cmtogj0g0000iju046da0u9w6",
+        "vendor": "Cursor",
+        "date": "2026-08-02",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1775,
+        "ivaCreditoCents": 1775,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtogj0g0000iju046da0u9w6"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtogj0g0000iju046da0u9w6"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1775,
+        "creditoSumAllUscita": 1775
+      },
+      {
+        "eventKey": "cmtq238wt0007ju04ksflt09q",
+        "vendor": "Anthropic, PBC",
+        "date": "2026-08-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1800,
+        "ivaCreditoCents": 1800,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq238wt0007ju04ksflt09q"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq238wt0007ju04ksflt09q"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1800,
+        "creditoSumAllUscita": 1800
+      },
+      {
+        "eventKey": "cmtole1cs0005jx04x2wwvpp3",
+        "vendor": "Apple",
+        "date": "2026-08-16",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 81,
+        "ivaCreditoCents": 81,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtole1cs0005jx04x2wwvpp3"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtole1cs0005jx04x2wwvpp3"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 81,
+        "creditoSumAllUscita": 81
+      },
+      {
+        "eventKey": "cmtoikxhr0001l404hp8rdfna",
+        "vendor": "Stripe Payments Europe",
+        "date": "2026-08-31",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 817,
+        "ivaCreditoCents": 817,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtoikxhr0001l404hp8rdfna"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtoikxhr0001l404hp8rdfna"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 817,
+        "creditoSumAllUscita": 817
+      },
+      {
+        "eventKey": "cmtola3x00001jx04d8dxutke",
+        "vendor": "Stripe Payments Europe",
+        "date": "2026-08-31",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 662,
+        "ivaCreditoCents": 662,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtola3x00001jx04d8dxutke"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtola3x00001jx04d8dxutke"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 662,
+        "creditoSumAllUscita": 662
+      },
+      {
+        "eventKey": "cmtojrg5d0001jr04tci3q5ge",
+        "vendor": "Meta Platforms",
+        "date": "2026-09-01",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 124,
+        "ivaCreditoCents": 124,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtojrg5d0001jr04tci3q5ge"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtojrg5d0001jr04tci3q5ge"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 124,
+        "creditoSumAllUscita": 124
+      },
+      {
+        "eventKey": "cmtog1hl20005ju04ttdrzqbg",
+        "vendor": "Cursor",
+        "date": "2026-09-02",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1775,
+        "ivaCreditoCents": 1775,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtog1hl20005ju04ttdrzqbg"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtog1hl20005ju04ttdrzqbg"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1775,
+        "creditoSumAllUscita": 1775
+      },
+      {
+        "eventKey": "cmtoape3w0001jv04pbdt257e",
+        "vendor": "Vercel Inc.",
+        "date": "2026-09-03",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1727,
+        "ivaCreditoCents": 1727,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtoape3w0001jv04pbdt257e"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtoape3w0001jv04pbdt257e"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1727,
+        "creditoSumAllUscita": 1727
+      },
+      {
+        "eventKey": "cmtq24ct1000aju041aukrnjh",
+        "vendor": "Anthropic, PBC",
+        "date": "2026-09-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 1800,
+        "ivaCreditoCents": 1800,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq24ct1000aju041aukrnjh"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq24ct1000aju041aukrnjh"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 1800,
+        "creditoSumAllUscita": 1800
+      },
+      {
+        "eventKey": "cmtq2e73c0001l804gfz7i5kk",
+        "vendor": "Vercel Inc.",
+        "date": "2026-09-06",
+        "nEntrata": 1,
+        "nUscita": 1,
+        "ivaDebitoCents": 215,
+        "ivaCreditoCents": 215,
+        "saldoCents": 0,
+        "hasDebito": true,
+        "hasCredito": true,
+        "entKeys": [
+          "MANUAL_EXPENSE:cmtq2e73c0001l804gfz7i5kk"
+        ],
+        "uscKeys": [
+          "FOREIGN_AUTOFATTURA:cmtq2e73c0001l804gfz7i5kk"
+        ],
+        "note": "OK bilanciato",
+        "debitoSumAllEntrata": 215,
+        "creditoSumAllUscita": 215
+      }
+    ]
+  },
+  "v2": {
+    "corrispettivi": {
+      "byQuarter": {
+        "1": {
+          "n": 21,
+          "sales": "1038,23",
+          "iva": "94,43",
+          "ivaCents": 9443
+        },
+        "2": {
+          "n": 22,
+          "sales": "1246,02",
+          "iva": "113,29",
+          "ivaCents": 11329
+        },
+        "3": {
+          "n": 35,
+          "sales": "2092,91",
+          "iva": "190,25",
+          "ivaCents": 19025
+        },
+        "4": {
+          "n": 0,
+          "sales": "0,00",
+          "iva": "0,00",
+          "ivaCents": 0
+        }
+      },
+      "totalIvaCents": 39797,
+      "totalIvaEuro": "397,97",
+      "source": "buildGatewayCorrispettivi — scorporo 10% su ogni vendita (LIPE / dichiarazione)"
+    },
+    "contoEconomico": {
+      "ivaDebitoCents": 26289,
+      "ivaDebitoEuro": "262,89",
+      "decomposition": {
+        "arcReverseCharge": {
+          "cents": 25717,
+          "euro": "257,17"
+        },
+        "ricaviVenditeVatField": {
+          "cents": 572,
+          "euro": "5,72"
+        },
+        "altriRicavi": {
+          "cents": 0,
+          "euro": "0,00"
+        },
+        "contributi": {
+          "cents": 0,
+          "euro": "0,00"
+        },
+        "rimborsiEntrata": {
+          "cents": 0,
+          "euro": "0,00"
+        },
+        "menoRimborsiUscitaVat": {
+          "cents": 0,
+          "euro": "-0,00"
+        },
+        "sumCheck": "262,89"
+      },
+      "source": "computeHistoricalPnl — somma vatCents ledger (non scorporo corrispettivi)",
+      "venditeCeEuro": "4000,80",
+      "expectedIvaIfScorporo10OnCeVendite": "363,71"
+    },
+    "gap": {
+      "cents": 13508,
+      "euro": "135,08",
+      "formula": "corrispettivi IVA − CE IVA debito"
+    },
+    "matchingInsight": {
+      "gwRows": 78,
+      "matchedLedgerVatOk": 0,
+      "matchedLedgerVat0": 17,
+      "unmatched": 61,
+      "zeroVatMatchedSample": [
+        {
+          "tx": "66C04847WL650301D",
+          "gross": 3999,
+          "gwIva": 364,
+          "ledgerKey": "PAYPAL_TX:66C04847WL650301D"
+        },
+        {
+          "tx": "22E30531F99808504",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:22E30531F99808504"
+        },
+        {
+          "tx": "8YH43677SS377553L",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:8YH43677SS377553L"
+        },
+        {
+          "tx": "44E519039S467634K",
+          "gross": 3999,
+          "gwIva": 364,
+          "ledgerKey": "PAYPAL_TX:44E519039S467634K"
+        },
+        {
+          "tx": "2GU64478W4726692S",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:2GU64478W4726692S"
+        },
+        {
+          "tx": "4W6628604D401674M",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:4W6628604D401674M"
+        },
+        {
+          "tx": "83N54580AU0027713",
+          "gross": 4999,
+          "gwIva": 454,
+          "ledgerKey": "PAYPAL_TX:83N54580AU0027713"
+        },
+        {
+          "tx": "3D552868PU399581S",
+          "gross": 7248,
+          "gwIva": 659,
+          "ledgerKey": "PAYPAL_TX:3D552868PU399581S"
+        },
+        {
+          "tx": "95E92452N40245344",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:95E92452N40245344"
+        },
+        {
+          "tx": "09C2701554000764W",
+          "gross": 2999,
+          "gwIva": 273,
+          "ledgerKey": "PAYPAL_TX:09C2701554000764W"
+        },
+        {
+          "tx": "5VV92297N9957570R",
+          "gross": 5998,
+          "gwIva": 545,
+          "ledgerKey": "PAYPAL_TX:5VV92297N9957570R"
+        },
+        {
+          "tx": "1T757598T7263511M",
+          "gross": 5348,
+          "gwIva": 486,
+          "ledgerKey": "PAYPAL_TX:1T757598T7263511M"
+        },
+        {
+          "tx": "43H07985E69976410",
+          "gross": 4999,
+          "gwIva": 454,
+          "ledgerKey": "PAYPAL_TX:43H07985E69976410"
+        },
+        {
+          "tx": "8JD06462TK660002D",
+          "gross": 3248,
+          "gwIva": 295,
+          "ledgerKey": "PAYPAL_TX:8JD06462TK660002D"
+        },
+        {
+          "tx": "6TL5310123588930U",
+          "gross": 4999,
+          "gwIva": 454,
+          "ledgerKey": "PAYPAL_TX:6TL5310123588930U"
+        }
+      ],
+      "zeroVatMatchedIvaLostCents": 6567,
+      "note": "Molte righe RICAVI_VENDITE hanno vatCents=0 mentre il registro scorpora il 10% → CE sottostima IVA debito vendite"
+    },
+    "refundVatRows": [],
+    "ricaviWithVatN": 2,
+    "ricaviWithVatSum": "5,72"
+  },
+  "pnlLive": {
+    "ivaDebito": "262,89",
+    "ivaCredito": "1194,06",
+    "vendite": "4000,80"
+  }
+}

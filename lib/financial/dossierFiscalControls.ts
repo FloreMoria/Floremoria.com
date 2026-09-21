@@ -35,7 +35,8 @@ export type DossierControlId =
     | 'C11'
     | 'C12'
     | 'C13'
-    | 'C14';
+    | 'C14'
+    | 'C15';
 
 export type DossierControlResult = {
     id: DossierControlId;
@@ -86,6 +87,16 @@ export type DossierControlResult = {
         verifiable: boolean;
         sampleLedgerEvents: string[];
     }>;
+    /** C15: due gambe IVA (debito corrispettivi↔CE; credito fatture↔ledger). */
+    ivaCoherence?: {
+        debitoCorrispettiviCents: number;
+        debitoCeVenditeCents: number;
+        deltaDebitoCents: number;
+        creditoFatturePassiveCents: number;
+        creditoLedgerCents: number;
+        deltaCreditoCents: number;
+        arcExcludedCents: number;
+    };
 };
 
 /** Elenco chiuso mastri — METODO §6.1 (testo esatto). */
@@ -108,6 +119,7 @@ export const DOSSIER_ALLOWED_MASTRI = [
     'Risconti',
     'IVA a credito',
     'IVA a debito',
+    'Erario c/IVA',
     'Finanziamento soci',
     'Da classificare',
 ] as const;
@@ -1044,6 +1056,66 @@ export async function controlC14(year: number, quarter: TaxQuarter): Promise<Dos
     };
 }
 
+/**
+ * C15 — Coerenza IVA dichiarazione ↔ Erario c/IVA (METODO §5 / §8).
+ *
+ * Gamba A — IVA a debito: registro corrispettivi = scritture Erario debito (±1¢).
+ * Gamba B — IVA a credito: fatture passive SDI = scritture Erario credito (±1¢).
+ *
+ * Avviso visibile se rosso. Non blocca l’export del Registro Corrispettivi commercialista
+ * (API separata). L’export dossier interno può segnalare C15 senza hard-block 409
+ * finché non è verde (METODO 1.29).
+ */
+export async function controlC15(
+    year: number,
+    quarter: TaxQuarter
+): Promise<DossierControlResult> {
+    const TOLERANCE_CENTS = 1;
+
+    const {
+        computeErarioIvaPeriod,
+        readErarioIvaFromLedger,
+    } = await import('@/lib/financial/erarioIva');
+
+    const expected = await computeErarioIvaPeriod(year, quarter);
+    const ledger = await readErarioIvaFromLedger(year, quarter);
+
+    const deltaDebitoCents =
+        expected.debitoCorrispettiviCents - ledger.debitoCents;
+    const deltaCreditoCents =
+        expected.creditoFatturePassiveCents - ledger.creditoCents;
+
+    const maxAbs = Math.max(Math.abs(deltaDebitoCents), Math.abs(deltaCreditoCents));
+    const passed =
+        Math.abs(deltaDebitoCents) <= TOLERANCE_CENTS &&
+        Math.abs(deltaCreditoCents) <= TOLERANCE_CENTS;
+
+    return {
+        id: 'C15',
+        name: 'Coerenza IVA dichiarazione ↔ Erario c/IVA',
+        formula:
+            'A: IVA debito corrispettivi − Erario debito ledger = 0; B: IVA credito fatture passive − Erario credito ledger = 0 (±1¢)',
+        measured: maxAbs,
+        expected: 0,
+        delta: maxAbs,
+        unit: 'cents',
+        passed,
+        verifiable: true,
+        detail: passed
+            ? `C15 OK T${quarter} ${year}: Erario debito=${(ledger.debitoCents / 100).toFixed(2)} = corr; credito=${(ledger.creditoCents / 100).toFixed(2)} = fatture.`
+            : `C15 AVVISO T${quarter} ${year}: Δ debito €${(deltaDebitoCents / 100).toFixed(2)} (corr ${(expected.debitoCorrispettiviCents / 100).toFixed(2)} vs Erario ${(ledger.debitoCents / 100).toFixed(2)}); Δ credito €${(deltaCreditoCents / 100).toFixed(2)} (fatture ${(expected.creditoFatturePassiveCents / 100).toFixed(2)} vs Erario ${(ledger.creditoCents / 100).toFixed(2)}). Non blocca Registro Corrispettivi commercialista.`,
+        ivaCoherence: {
+            debitoCorrispettiviCents: expected.debitoCorrispettiviCents,
+            debitoCeVenditeCents: ledger.debitoCents,
+            deltaDebitoCents,
+            creditoFatturePassiveCents: expected.creditoFatturePassiveCents,
+            creditoLedgerCents: ledger.creditoCents,
+            deltaCreditoCents,
+            arcExcludedCents: 0,
+        },
+    };
+}
+
 export async function runAllDossierControls(
     year: number,
     quarter: TaxQuarter,
@@ -1064,10 +1136,11 @@ export async function runAllDossierControls(
         await controlC12(year, quarter),
         await controlC13(year, quarter),
         await controlC14(year, quarter),
+        await controlC15(year, quarter),
     ];
 }
 
-/** Esegue C1–C14 e persiste lo snapshot per il badge Contabilità. */
+/** Esegue C1–C15 e persiste lo snapshot per il badge Contabilità. */
 export async function runAndPersistDossierControls(
     year: number,
     quarter: TaxQuarter,

@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.27 — 21 settembre 2026.
+Versione 1.29 — 21 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -212,6 +212,16 @@ Quadratura in coda e persistito per la UI.
 | C12 | Data ordine = data incasso | per ogni ordine abbinato a un movimento gateway: \|data ordine − data incasso\|; tolleranza dichiarata ≤ 24h (fuso) non conta come errore | 0 |
 | C13 | Saldo transito / conto pagamento | Stripe: saldo transito vendite − dichiarato; PayPal: riconciliazione **conto di pagamento** (non ciclo vendite) − dichiarato | 0 |
 | C14 | Coerenza fee partner | SUM(fee arrotondate per ordine) − fattura mensile − trattenute Connect = 0 (±tolleranza dichiarata, default 1¢). Senza fattura → **non verificabile**, non fallito | 0 |
+| C15 | Coerenza IVA dichiarazione ↔ Erario c/IVA | **A:** IVA debito corrispettivi − Erario debito ledger = 0 (±1¢). **B:** IVA credito fatture passive − Erario credito ledger = 0 (±1¢). Avviso se rosso; **non** blocca Registro Corrispettivi commercialista | 0 |
+
+**Regola IVA a debito (dichiarazione).** L’IVA a debito che va in liquidazione / LIPE ha
+**una sola fonte: il registro corrispettivi** (scorporo 10% sulle vendite gateway). Il conto
+economico serve alla gestione, non alla liquidazione. Nello **stato patrimoniale** l’IVA a
+debito compare come passività **Erario c/IVA** (scrittura patrimoniale, senza effetto sul
+risultato economico). Se CE e corrispettivi divergono sull’IVA, **non** si tocca il registro:
+si allinea Erario / CE. Il reverse charge TD17 è un meccanismo separato: IVA letta dai
+documenti (non assunta bilanciata); credito detraibile solo fino al debito; sbilanci → lista
+di lavoro.
 
 **C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
 alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
@@ -260,12 +270,19 @@ stato non verificabile, non fallito.** Verde di riposo raggiungibile quando i tr
 quadrano. La trattenuta Connect è il **pagamento del debito** maturato all’ordine, non un
 secondo costo; la fattura mensile **chiude** il debito senza generare costo aggiuntivo.
 
+**C15 — coerenza IVA dichiarazione ↔ Erario c/IVA.** Due gambe indipendenti, entrambe a zero
+(±1¢) per il verde:
+1. **Debito:** IVA del registro corrispettivi = scrittura patrimoniale Erario debito.
+2. **Credito:** IVA delle fatture passive SDI = scrittura patrimoniale Erario credito.
+Avviso visibile se rosso. **Non blocca** l’export del Registro Corrispettivi commercialista
+(API dedicata, fonte = corrispettivi).
+
 ### 5.1 Controllo, lista di lavoro, risultato
 
 Tre oggetti distinti. **Non si mescolano mai nella stessa vista.** Il colore verde/rosso
 si applica **solo** ai controlli.
 
-| | Controllo (C1–C13) | Lista di lavoro | Risultato |
+| | Controllo (C1–C15) | Lista di lavoro | Risultato |
 |---|---|---|---|
 | Cos’è | Confronta **due letture dello stesso fatto** e verifica che coincidano | Arretrato operativo (es. fatture fiorista da sollecitare, autofatture da trasmettere) | Numero economico: ricavi, costi, RAI, IVA a debito, … |
 | Esito atteso | **Scostamento nullo** fra le due letture — non “un importo economico pari a zero” | Non esiste un zero operativo: la lista è **per definizione non vuota** | **Nessun** valore atteso |
@@ -820,6 +837,19 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.29 — 21 settembre 2026**
+- §5 — **C15** ritarget: confronto corrispettivi/fatture ↔ scritture **Erario c/IVA**
+  (patrimoniali). Avviso se rosso; non blocca Registro Corrispettivi commercialista.
+- §5 / SP — IVA a debito da corrispettivi e IVA a credito da fatture in Erario c/IVA
+  senza effetto sul risultato economico. TD17: IVA letta dai documenti, credito solo
+  fino al debito, sbilanci in lista di lavoro.
+
+**1.28 — 21 settembre 2026**
+- §5 — **C15** coerenza IVA dichiarazione ↔ CE/ledger (debito corrispettivi vs CE vendite;
+  credito fatture passive vs ledger; ARC escluso). Se rosso → **export dossier bloccato**.
+- §5 / §8 — regola: IVA a debito in liquidazione = **solo registro corrispettivi**; se CE
+  diverge, si corregge il CE.
 
 **1.27 — 21 settembre 2026**
 - §6.2 — principio attribuzione partner↔beneficiario: solo token distintivi (esclusi

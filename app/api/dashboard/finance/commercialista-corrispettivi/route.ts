@@ -20,6 +20,8 @@ export const maxDuration = 120;
  * ?year=2026&quarter=2|T2|YEAR&format=xlsx|json
  *
  * Export commercialista: soli F1+F2 (Registro Corrispettivi). F3 sospeso.
+ * NON passa dai controlli dossier C1–C15: C15 rosso non può bloccare questo download
+ * (fonte = registro corrispettivi, indipendente da Erario/CE).
  */
 export async function GET(request: NextRequest) {
     const auth = await requireDashboardAdmin();

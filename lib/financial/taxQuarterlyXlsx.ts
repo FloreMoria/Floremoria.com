@@ -419,7 +419,7 @@ async function buildQuadraturaSheet(
     }
     ws.addRow([]);
 
-    ws.addRow(['Esito controlli C1–C13 (METODO §5)']).getCell(1).font = {
+    ws.addRow(['Esito controlli C1–C15 (METODO §5)']).getCell(1).font = {
         bold: true,
         size: 12,
         name: 'Calibri',
@@ -943,6 +943,9 @@ export async function buildTaxQuarterlyXlsxBuffer(
         .reduce((s, r) => s + Math.max(0, r.ivaCents), 0);
 
     const controls = await runAndPersistDossierControls(year, quarter, opts);
+
+    // C15: avviso in Quadratura se rosso; non hard-block export (Registro Corrispettivi
+    // commercialista è API separata e non passa da qui). METODO §5 C15.
 
     const {
         getProvisionalBankStats,

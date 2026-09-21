@@ -90,6 +90,23 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ ok: true, report });
     } catch (error) {
         console.error('[tax-quarterly GET]', error);
+        const code =
+            error && typeof error === 'object' && 'code' in error
+                ? String((error as { code?: string }).code || '')
+                : '';
+        if (code === 'DOSSIER_EXPORT_BLOCKED_C15') {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : 'Export dossier bloccato: C15 rosso',
+                    code: 'DOSSIER_EXPORT_BLOCKED_C15',
+                },
+                { status: 409 }
+            );
+        }
         return NextResponse.json(
             { ok: false, error: error instanceof Error ? errMessage(error) : 'Errore report' },
             { status: 500 },

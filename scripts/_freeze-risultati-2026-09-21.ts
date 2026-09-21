@@ -7,6 +7,9 @@ import { join } from 'path';
 import prisma from '@/lib/prisma';
 import { computeHistoricalPnl } from '@/lib/financial/historicalLedgerQuery';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
+import { readErarioIvaFromLedger, syncErarioIvaYear } from '@/lib/financial/erarioIva';
+import { controlC15 } from '@/lib/financial/dossierFiscalControls';
+import type { TaxQuarter } from '@/lib/financial/taxQuarterly';
 
 function euro(cents: number) {
     return (cents / 100).toLocaleString('it-IT', {
@@ -17,7 +20,15 @@ function euro(cents: number) {
 
 async function main() {
     const at = new Date().toISOString();
-    const label = 'FREEZE_UFFICIALE_2026-09-21_DEDUPE_FATTURA_RIMBORSI';
+    const label = 'FREEZE_UFFICIALE_2026-09-21_ERARIO_IVA_C15';
+
+    await syncErarioIvaYear(2026);
+    const erario = await readErarioIvaFromLedger(2026);
+    const c15Results = [];
+    for (const q of [1, 2, 3] as TaxQuarter[]) {
+        c15Results.push(await controlC15(2026, q));
+    }
+
     const pnl = await computeHistoricalPnl({ fiscalYear: 2026 });
     const contributi = pnl.contributiEsercizioCents || 0;
     const esercizio = pnl.risultatoAnteImposteCents;
@@ -90,12 +101,20 @@ async function main() {
         engineNotes: [
             'Dedupe costi: fattura passiva prevale sul bonifico (regolamento).',
             'Rimborsi cliente (USCITA) riducono ricavi/vendite, non aumentano i costi.',
-            'Autofatture TD17 → AUTOFATTURE_REVERSE_CHARGE (effetto CE nullo; IVA debito/credito).',
-            'PayPal HAYUM vendite in RICAVI_VENDITE (non più ARCH_PAYPAL_NOT_GATEWAY).',
+            'Autofatture TD17: IVA letta dai documenti; credito solo fino al debito; sbilanci → work-list.',
+            'Erario c/IVA patrimoniale (debito=corrispettivi, credito=fatture); fuori dal CE.',
+            'C15: corrispettivi/fatture ↔ Erario; non blocca Registro Corrispettivi commercialista.',
         ],
         checks: {
             dcStudioKeepsInvoice: dcExpKept,
             dcStudioDropsBank: !dcBankKept,
+            c15AllGreen: c15Results.every((c) => c.passed),
+            c15: c15Results.map((c) => ({
+                quarter: c.detail.match(/T(\d)/)?.[1],
+                passed: c.passed,
+                detail: c.detail,
+            })),
+            arcWorkListCount: pnl.autofattureRcWorkList?.length ?? 0,
             dcStudioLedgerRows: rows.map((r) => ({
                 sourceKey: r.sourceKey,
                 category: r.category,
@@ -119,6 +138,9 @@ async function main() {
             risultatoGestione: gestione,
             ivaDebito: pnl.ivaDebitoCents,
             ivaCredito: pnl.ivaCreditoCents,
+            erarioIvaDebito: erario.debitoCents,
+            erarioIvaCredito: erario.creditoCents,
+            erarioIvaSaldo: erario.debitoCents - erario.creditoCents,
             cashBank: bankAgg._sum.amountCents || 0,
         },
         euro: {
@@ -137,6 +159,9 @@ async function main() {
             risultatoGestione: euro(gestione),
             ivaDebito: euro(pnl.ivaDebitoCents),
             ivaCredito: euro(pnl.ivaCreditoCents),
+            erarioIvaDebito: euro(erario.debitoCents),
+            erarioIvaCredito: euro(erario.creditoCents),
+            erarioIvaSaldo: euro(erario.debitoCents - erario.creditoCents),
             cashBank: euro(bankAgg._sum.amountCents || 0),
         },
     };
@@ -158,11 +183,12 @@ async function main() {
 
 - Dedupe costi: **fattura passiva** tiene il CE; bonifico = regolamento (allegato).
 - Rimborsi cliente (USCITA): **riduzione di ricavo**, non costo operativo.
-- Autofatture TD17: categoria \`AUTOFATTURE_REVERSE_CHARGE\` (fuori ricavi; IVA debito = credito).
-- PayPal HAYUM: vendite in \`RICAVI_VENDITE\` (allineate al registro corrispettivi).
+- Autofatture TD17: IVA letta dai documenti (credito solo fino al debito).
+- Erario c/IVA patrimoniale (debito = corrispettivi; credito = fatture passive).
+- C15 T1–T3: \`${c15Results.every((c) => c.passed)}\`.
 - Check DC Studio: fattura tenuta=\`${dcExpKept}\`, bank soppressa=\`${!dcBankKept}\`.
 
-## Risultati
+## Risultati CE
 
 | Voce | Euro |
 |------|------|
@@ -179,9 +205,19 @@ async function main() {
 | EBITDA | ${freeze.euro.ebitda} |
 | **Risultato esercizio** (con CCIAA) | **${freeze.euro.risultatoEsercizio}** |
 | **Risultato gestione** (senza CCIAA) | **${freeze.euro.risultatoGestione}** |
-| IVA a debito | ${freeze.euro.ivaDebito} |
-| IVA a credito | ${freeze.euro.ivaCredito} |
+| IVA PnL (ARC documentale) debito / credito | ${freeze.euro.ivaDebito} / ${freeze.euro.ivaCredito} |
 | Saldo banca (Σ linee) | ${freeze.euro.cashBank} |
+
+## Stato patrimoniale — Erario c/IVA
+
+| Voce | Euro |
+|------|------|
+| IVA a debito (da corrispettivi) | ${freeze.euro.erarioIvaDebito} |
+| IVA a credito (da fatture passive) | ${freeze.euro.erarioIvaCredito} |
+| **Saldo Erario** (debito − credito) | **${freeze.euro.erarioIvaSaldo}** |
+
+## C15
+${c15Results.map((c) => `- ${c.passed ? 'OK' : 'AVVISO'}: ${c.detail}`).join('\n')}
 
 `
     );

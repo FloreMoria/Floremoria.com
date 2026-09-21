@@ -34,21 +34,43 @@ const FUNDING_EVENT_CODES = new Set([
     'T0300', // bank deposit / card funding
     'T0301',
     'T0302',
+    'T5001', // accredito speculare / deposit mirror (pareggio saldo)
 ]);
 
-/** Trasferimenti verso conto bancario (payout). */
+/**
+ * Sweep / withdrawal / transfer verso banca o pareggio saldo.
+ * Non sono costi operativi: giroconto (cassa PayPal ↔ transito ↔ Fineco).
+ */
 const PAYOUT_EVENT_CODES = new Set([
     'T0400', // general withdrawal
     'T0401',
     'T0403',
+    'T2000', // withdrawal series
+    'T2001',
+    'T2002',
+    'T2003',
+    'T5000', // withdrawal / transfer out (pareggio netto)
 ]);
 
-/** Incassi e-commerce PayPal. */
+/** Incassi e-commerce PayPal (evento primario da mostrare in dashboard ordini). */
 const ORDER_EVENT_CODES = new Set([
     'T0006', // express checkout
     'T0007', // website payment
     'T0011', // mobile payment
 ]);
+
+/** True se T-code = giroconto / sweep / funding (non incasso ordine). */
+export function isPaypalTransitGirocontoEventCode(eventCode?: string | null): boolean {
+    const code = String(eventCode || '')
+        .trim()
+        .toUpperCase();
+    if (!code) return false;
+    return (
+        FUNDING_EVENT_CODES.has(code) ||
+        PAYOUT_EVENT_CODES.has(code) ||
+        SKIP_EVENT_CODES.has(code)
+    );
+}
 
 export type PaypalGatewayMovementKind =
     | 'incasso'
@@ -74,7 +96,7 @@ export const SAAS_MERCHANT_RE =
 
 /** Movimenti interni PayPal (netto/esborso) — non sono lordo vendita né spesa. */
 const INTERNAL_NET_RE =
-    /importo\s+pagato|denaro\s+raccolto\s+per\s+esborso|general\s+withdrawal|user\s+initiated\s+withdrawal|currency\s+conversion|conversione\s+valuta|temporary\s+hold/i;
+    /importo\s+pagato|denaro\s+raccolto\s+per\s+esborso|general\s+withdrawal|user\s+initiated\s+withdrawal|currency\s+conversion|conversione\s+valuta|temporary\s+hold|trasferimento\s+di\s+denaro|transfer\s+of\s+funds|auto[\s-]?sweep|withdrawal\s+to\s+bank|prelievo\s+(?:verso|su)\s+(?:banca|conto)/i;
 
 /** Autorizzazioni che spesso duplicano il carico carta (stesso giorno/importo). */
 const AUTH_DUP_RE = /autorizzazione\s+generica|general\s+authorization/i;
@@ -142,8 +164,8 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
         return {
             record: false,
             category: 'PAYPAL_PAYOUT',
-            direction: 'USCITA',
-            reason: `skip_payout_${code}`,
+            direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
+            reason: `skip_payout_giroconto_${code}`,
         };
     }
 
@@ -151,7 +173,7 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
     if (INTERNAL_NET_RE.test(desc) || INTERNAL_NET_RE.test(text)) {
         return {
             record: false,
-            category: 'ALTRI_COSTI',
+            category: 'TRASFERIMENTO_INTERNO',
             direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
             reason: 'skip_internal_net_or_payout_bookkeeping',
         };
@@ -291,12 +313,13 @@ export function classifyPaypalGatewayMovement(
     }
 
     if (code && PAYOUT_EVENT_CODES.has(code)) {
+        // Vista ordini: nascosti (giroconto). Non etichettare come spesa/abbonamento.
         return {
-            record: true,
-            movementKind: 'payout',
-            label: 'Payout Bancario',
+            record: false,
+            movementKind: 'skip',
+            label: 'Giroconto PayPal → banca',
             isFunding: false,
-            reason: `payout_${code}`,
+            reason: `giroconto_payout_${code}`,
         };
     }
 
@@ -307,6 +330,18 @@ export function classifyPaypalGatewayMovement(
             label: 'Netto interno PayPal',
             isFunding: false,
             reason: 'skip_internal_net',
+        };
+    }
+
+    // Descrizione generica "PayPal {id}" senza fee: spesso netto/sweep speculare (±netto vendita)
+    const genericOnly = /^paypal\s+[A-Z0-9]+$/i.test(desc) || /^paypal$/i.test(desc);
+    if (genericOnly && (!input.feeCents || input.feeCents === 0)) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Giroconto / pareggio saldo PayPal',
+            isFunding: false,
+            reason: gross >= 0 ? 'skip_generic_credit_no_fee' : 'skip_generic_debit_no_fee',
         };
     }
 
@@ -352,7 +387,7 @@ export function classifyPaypalGatewayMovement(
         };
     }
 
-    if (code && ORDER_EVENT_CODES.has(code)) {
+    if (code && ORDER_EVENT_CODES.has(code) && gross > 0) {
         return {
             record: true,
             movementKind: 'incasso',
@@ -362,6 +397,7 @@ export function classifyPaypalGatewayMovement(
         };
     }
 
+    // T0000 negativo = pagamento fornitore (non giroconto)
     if (code === 'T0000' && gross < 0) {
         return {
             record: true,
@@ -372,7 +408,8 @@ export function classifyPaypalGatewayMovement(
         };
     }
 
-    if (gross >= 0) {
+    // Solo eventi ordine / capture confermati → incasso; altri crediti senza codice = sospetto
+    if (gross > 0 && (!code || ORDER_EVENT_CODES.has(code))) {
         return {
             record: true,
             movementKind: 'incasso',
@@ -382,21 +419,32 @@ export function classifyPaypalGatewayMovement(
         };
     }
 
-    if (/trasferimento|withdrawal|payout|bonifico|user initiated|prelievo/i.test(desc)) {
+    if (/trasferimento|withdrawal|payout|bonifico|user initiated|prelievo|transfer/i.test(desc)) {
         return {
-            record: true,
-            movementKind: 'payout',
-            label: 'Payout Bancario',
+            record: false,
+            movementKind: 'skip',
+            label: 'Giroconto PayPal → banca',
             isFunding: false,
-            reason: 'payout_description',
+            reason: 'giroconto_description',
+        };
+    }
+
+    // Uscite residue senza merchant SaaS: non inventare "Spesa/Abbonamento"
+    if (gross < 0) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Movimento tecnico PayPal',
+            isFunding: false,
+            reason: 'skip_unclassified_out',
         };
     }
 
     return {
-        record: true,
-        movementKind: 'altro',
-        label: 'Uscita PayPal',
+        record: false,
+        movementKind: 'skip',
+        label: 'Movimento tecnico PayPal',
         isFunding: false,
-        reason: 'other_out',
+        reason: 'skip_unclassified',
     };
 }

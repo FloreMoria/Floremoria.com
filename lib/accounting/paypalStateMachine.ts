@@ -75,8 +75,17 @@ const REVERSAL_LABEL_RE =
 const ORDER_CAPTURE_LABEL_RE =
     /express checkout|website payment|pagamento espresso|pagamento del sito|incasso ordine|mobile payment|pagamento mobile/i;
 
-const FUNDING_EVENT_CODES = new Set(['T0300', 'T0301', 'T0302']);
-const PAYOUT_EVENT_CODES = new Set(['T0400', 'T0401', 'T0403']);
+const FUNDING_EVENT_CODES = new Set(['T0300', 'T0301', 'T0302', 'T5001']);
+const PAYOUT_EVENT_CODES = new Set([
+    'T0400',
+    'T0401',
+    'T0403',
+    'T2000',
+    'T2001',
+    'T2002',
+    'T2003',
+    'T5000',
+]);
 const ORDER_EVENT_CODES = new Set(['T0006', 'T0007', 'T0011']);
 const REVERSAL_EVENT_CODES = new Set(['T1106', 'T1107', 'T1110', 'T1111']);
 const SKIP_INTERNAL_CODES = new Set(['T0200', 'T0201', 'T0202', 'T1105', 'T1200', 'T1201']);

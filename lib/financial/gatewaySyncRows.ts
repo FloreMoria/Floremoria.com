@@ -161,7 +161,7 @@ function classifyStripeType(type: string, amountCents: number): {
     isTechnical?: boolean;
 } {
     const t = (type || '').toLowerCase();
-    if (t.includes('climate'))
+    if (t.includes('climate') || t === 'contribution')
         return { kind: 'commissione', label: 'Contributo Stripe Climate', isTechnical: true };
     if (t === 'charge' || t === 'payment') return { kind: 'incasso', label: 'Incasso Ordine' };
     if (t === 'payment_refund' || t === 'refund' || t === 'refund_failure')
@@ -173,8 +173,39 @@ function classifyStripeType(type: string, amountCents: number): {
     if (t.includes('reserve')) return { kind: 'riserva', label: 'Riserva' };
     if (amountCents < 0 && (t === 'adjustment' || t === 'fee'))
         return { kind: 'commissione', label: 'Regolazione / Fee', isTechnical: true };
-    return { kind: 'altro', label: 'Movimento Tecnico' };
+    return { kind: 'altro', label: 'Movimento Tecnico', isTechnical: true };
 }
+
+/**
+ * Stripe balance txn con fee PayPal passthrough = stesso incasso già in PayPal (T0006).
+ * Fonte di verità: PayPal; la riga Stripe è fantasma / doppio conteggio.
+ */
+export function isStripePaypalPassthrough(meta: Record<string, unknown>): boolean {
+    const feeDetails = meta.fee_details;
+    if (!Array.isArray(feeDetails)) return false;
+    return feeDetails.some((f) => {
+        if (!f || typeof f !== 'object') return false;
+        const row = f as Record<string, unknown>;
+        const type = String(row.type || '').toLowerCase();
+        const desc = String(row.description || '').toLowerCase();
+        return (
+            type.includes('passthrough') ||
+            desc.includes('paypal') ||
+            type === 'payment_method_passthrough_fee'
+        );
+    });
+}
+
+const STRIPE_FAILED_STATUSES = new Set([
+    'failed',
+    'canceled',
+    'cancelled',
+    'requires_payment_method',
+    'requires_action',
+    'requires_confirmation',
+    'incomplete',
+    'incomplete_expired',
+]);
 
 function classifyPaypal(
     description: string,
@@ -240,6 +271,18 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
     const meta = asMeta(m.metadataJson);
     const stripeId = String(m.stripeId || m.id || '');
     if (!stripeId) return null;
+
+    const statusRaw = str(m.status)?.toLowerCase() || null;
+    // PI/charge abortiti o incompleti: non sono incasso confermato
+    if (statusRaw && STRIPE_FAILED_STATUSES.has(statusRaw)) return null;
+
+    // PayPal via Stripe (passthrough fee): duplicato dell'incasso PayPal — non mostrare
+    if (
+        (type === 'charge' || type === 'payment') &&
+        isStripePaypalPassthrough(meta)
+    ) {
+        return null;
+    }
 
     const rawId = rawStripeId(stripeId, meta);
     // Evita doppio payout: la riga `txn_*` type=payout è speculare rispetto a `po_*`
@@ -313,13 +356,15 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
         transactionId = sourceId;
     }
 
-    const statusRaw = str(m.status);
     const statusLabel =
         !statusRaw ||
         statusRaw === 'available' ||
         statusRaw === 'paid' ||
-        statusRaw === 'succeeded'
-            ? 'Completato'
+        statusRaw === 'succeeded' ||
+        statusRaw === 'pending'
+            ? statusRaw === 'pending'
+                ? 'In transito'
+                : 'Completato'
             : statusRaw;
 
     return {
@@ -435,6 +480,10 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
     const parsed = parsePaypalSourceKey(sourceKey);
     if (parsed?.kind === 'FEE') return null;
 
+    // Giroconti / payout già in ledger: non in vista ordini come spesa o doppio incasso
+    const cat = (entry.category || '') as LedgerCategory;
+    if (cat === 'TRASFERIMENTO_INTERNO' || cat === 'PAYPAL_PAYOUT') return null;
+
     const txId =
         parsed?.transactionId ||
         normalizePaypalTransactionId(entry.sourceId) ||
@@ -463,7 +512,6 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
         kind = 'payout';
         label = 'Payout Bancario';
     } else if (totalCents < 0 && kind === 'incasso') {
-        const cat = (entry.category || '') as LedgerCategory;
         if (cat === 'SPESE_SAAS' || isSaasPaypalDescription(entry.description, entry.counterpartyName)) {
             kind = 'altro';
             label = 'Spesa SaaS / Carta PayPal';
@@ -788,7 +836,13 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
     const sorted = [...rows].sort(
         (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
+    // Preferisci PayPal se nello stesso gruppo ordine c'è un incasso PayPal reale
+    // (evita riga Stripe fantasma quando il cliente ha saldato con PayPal).
+    const paypalIncasso = sorted.find(
+        (r) => r.gateway === 'paypal' && r.movementKind === 'incasso' && r.grossCents > 0
+    );
     const primary =
+        paypalIncasso ||
         sorted.find((r) => r.movementKind === 'incasso' && r.grossCents > 0) ||
         sorted.find((r) => r.movementKind === 'payout') ||
         sorted.find((r) => r.movementKind === 'rimborso') ||
@@ -809,23 +863,40 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
         eventKind = 'technical';
     else if (movementKind === 'incasso') eventKind = 'order';
 
+    // Per gruppo ordine: solo l'incasso del gateway vincente (PayPal se presente)
+    const incomeRows =
+        eventKind === 'order'
+            ? rows.filter(
+                  (r) =>
+                      r.movementKind === 'incasso' &&
+                      r.grossCents > 0 &&
+                      (!paypalIncasso || r.gateway === 'paypal')
+              )
+            : rows.filter((r) => r.movementKind === 'incasso' && r.grossCents > 0);
+
     let grossCents = 0;
     let feeCents = 0;
 
-    const incasso = rows.filter((r) => r.movementKind === 'incasso' && r.grossCents > 0);
-    if (incasso.length) {
-        grossCents = Math.max(...incasso.map((r) => r.grossCents));
+    if (incomeRows.length) {
+        // Un solo lordo: max tra i candidati del gateway scelto (non sommare Stripe+PayPal)
+        const best = incomeRows.reduce((a, b) => (b.feeCents >= a.feeCents ? b : a));
+        grossCents = best.grossCents;
+        feeCents = best.feeCents || 0;
     } else if (movementKind === 'payout' || movementKind === 'rimborso') {
         grossCents = primary.grossCents;
     } else {
         grossCents = Math.max(...rows.map((r) => r.grossCents));
     }
 
-    for (const r of rows) {
-        if (r.movementKind === 'incasso') {
-            feeCents = Math.max(feeCents, r.feeCents || 0);
-        } else if (r.isTechnical || r.movementKind === 'commissione') {
-            feeCents += Math.abs(r.grossCents || r.feeCents || 0);
+    // Fee tecniche Stripe solo se non c'è già PayPal (altrimenti doppio Climate/fee)
+    if (!paypalIncasso) {
+        for (const r of rows) {
+            if (
+                (r.isTechnical || r.movementKind === 'commissione') &&
+                r.movementKind !== 'incasso'
+            ) {
+                feeCents += Math.abs(r.grossCents || r.feeCents || 0);
+            }
         }
     }
 
@@ -844,10 +915,17 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
         null;
     const orderId = rows.map((r) => r.orderId).find(Boolean) || null;
     const customerName = rows.map((r) => r.customerName).find(Boolean) || null;
-    const customerEmail = rows.map((r) => r.customerEmail).find(Boolean) || null;
+    const customerEmail =
+        (paypalIncasso?.customerEmail || null) ||
+        rows.map((r) => r.customerEmail).find(Boolean) ||
+        null;
+
+    const displayRows = paypalIncasso
+        ? rows.filter((r) => r.gateway === 'paypal' || r.movementKind === 'rimborso')
+        : rows;
 
     const transactionIds = [
-        ...new Set(rows.map((r) => r.transactionId).filter(Boolean)),
+        ...new Set(displayRows.map((r) => r.transactionId).filter(Boolean)),
     ].slice(0, 8);
 
     let description = primary.description;
@@ -879,10 +957,39 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
         netCents,
         currency: primary.currency,
         statusLabel: primary.statusLabel,
-        sourceLabel: pickBestSourceLabel(rows),
+        sourceLabel: pickBestSourceLabel(displayRows.length ? displayRows : rows),
         transactionIds,
         rawRowCount: rows.length,
     };
+}
+
+/**
+ * Sopprime gruppi Stripe «Incasso» che duplicano un incasso PayPal stesso importo ±2 min.
+ * Caso tipico: PayPal Checkout espone anche una balance txn Stripe con fee passthrough
+ * (già filtrata) o residui senza fee_details ancora legati.
+ */
+function suppressDuplicateStripeOrderGroups(
+    groups: GatewaySyncGroupedRow[]
+): GatewaySyncGroupedRow[] {
+    const paypalOrders = groups.filter(
+        (g) => g.gateway === 'paypal' && g.eventKind === 'order' && g.grossCents > 0
+    );
+    if (!paypalOrders.length) return groups;
+
+    const WINDOW_MS = 2 * 60 * 1000;
+
+    return groups.filter((g) => {
+        if (g.gateway !== 'stripe' || g.eventKind !== 'order' || g.grossCents <= 0) return true;
+        const t = new Date(g.occurredAt).getTime();
+        const dup = paypalOrders.some((p) => {
+            if (p.grossCents !== g.grossCents && p.netCents !== g.netCents) return false;
+            if (g.orderNumber && p.orderNumber && g.orderNumber === p.orderNumber) return true;
+            if (g.orderId && p.orderId && g.orderId === p.orderId) return true;
+            const dt = Math.abs(t - new Date(p.occurredAt).getTime());
+            return dt <= WINDOW_MS && p.grossCents === g.grossCents;
+        });
+        return !dup;
+    });
 }
 
 /**
@@ -904,9 +1011,11 @@ export function groupGatewaySyncRowsForDisplay(rows: GatewaySyncRow[]): GatewayS
         groups.set(key, bucket);
     }
 
-    return Array.from(groups.entries())
+    const merged = Array.from(groups.entries())
         .map(([key, bucket]) => mergeGatewayGroup(key, bucket))
         .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+    return suppressDuplicateStripeOrderGroups(merged);
 }
 
 export function enrichGatewayRowsWithOrders(

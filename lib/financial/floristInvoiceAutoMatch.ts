@@ -48,23 +48,12 @@ export function normalizeOrderRef(raw: string | null | undefined): string {
     return (raw || '').toUpperCase().replace(/[\s\-_.#]/g, '');
 }
 
-export function normalizeName(s: string): string {
-    return s
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, ' ')
-        .trim();
-}
+import {
+    namesCompatible,
+    normalizePartnerName as normalizeName,
+} from '@/lib/financial/partnerNameMatch';
 
-export function namesCompatible(a: string, b: string): boolean {
-    const na = normalizeName(a);
-    const nb = normalizeName(b);
-    if (!na || !nb) return false;
-    if (na.includes(nb) || nb.includes(na)) return true;
-    const tokens = na.split(' ').filter((t) => t.length > 3);
-    return tokens.some((t) => nb.includes(t));
-}
+export { namesCompatible, normalizeName };
 
 function toDateOnlyIso(d: Date): string {
     return d.toISOString().slice(0, 10);

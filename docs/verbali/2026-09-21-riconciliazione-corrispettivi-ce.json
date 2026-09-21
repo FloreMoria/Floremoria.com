@@ -1,0 +1,561 @@
+{
+  "at": "2026-09-21T15:48:56.928Z",
+  "steps": [
+    {
+      "id": "A",
+      "label": "Registro corrispettivi (gateway)",
+      "cents": 437716,
+      "why": "fonte fiscale LIPE / F2"
+    },
+    {
+      "id": "B",
+      "label": "− gateway senza match in RICAVI_VENDITE (38)",
+      "cents": -215134,
+      "why": "assenza ledger o id charge/py ≠ txn"
+    },
+    {
+      "id": "C",
+      "label": "+ RICAVI_VENDITE ledger oltre match gateway (36)",
+      "cents": 196239,
+      "why": "JSON/ORDER/manuali o match fallito lato gateway"
+    },
+    {
+      "id": "D",
+      "label": "Σ RICAVI_VENDITE grezzi",
+      "cents": 435563,
+      "why": "controllo A+B+C ≈ D"
+    },
+    {
+      "id": "E",
+      "label": "− pose prepagate escluse dal CE (3)",
+      "cents": -8997,
+      "why": "corretto: anticipo pose ≠ vendita periodo"
+    },
+    {
+      "id": "F",
+      "label": "− doppi soppressi gerarchia (3)",
+      "cents": -12491,
+      "why": "corretto: stessa vendita già tenuta"
+    },
+    {
+      "id": "G",
+      "label": "Σ RICAVI post-gerarchia",
+      "cents": 414075,
+      "why": "base PnL prima rimborsi"
+    },
+    {
+      "id": "H",
+      "label": "− rimborsi cliente USCITA (2)",
+      "cents": -8497,
+      "why": "corretto: riduzione ricavo"
+    },
+    {
+      "id": "I",
+      "label": "± altri filtri PnL",
+      "cents": -5498,
+      "why": "quarantena/seed residui"
+    },
+    {
+      "id": "J",
+      "label": "Vendite caratteristiche CE",
+      "cents": 400080,
+      "why": "conto economico freeze"
+    },
+    {
+      "id": "K",
+      "label": "Gap gateway − CE",
+      "cents": 37636,
+      "why": "residuo aperto (non blocca LIPE)"
+    }
+  ],
+  "arc": {
+    "n": 34,
+    "debito": 25717,
+    "credito": 25717
+  },
+  "pnl": {
+    "vendite": 400080,
+    "esercizio": -360281,
+    "gestione": -820047,
+    "ivaDebito": 26289,
+    "ivaCredito": 119406
+  },
+  "unmatched": [
+    {
+      "transactionId": "ch_3TVvy64W4pZWhSUs0qSKhm1P",
+      "grossCents": 2999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-05-11"
+    },
+    {
+      "transactionId": "ch_3TYqjZ4W4pZWhSUs1mfz1KqI",
+      "grossCents": 3499,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-05-19"
+    },
+    {
+      "transactionId": "py_3TZBBT4W4pZWhSUs1wFm0e3s",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-05-20"
+    },
+    {
+      "transactionId": "py_3TZBFq4W4pZWhSUs13kgc1OA",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-05-20"
+    },
+    {
+      "transactionId": "ch_3ThmH14W4pZWhSUs1NIVn7o6",
+      "grossCents": 4397,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-06-13"
+    },
+    {
+      "transactionId": "py_3TjJBK4W4pZWhSUs1mfvQoPS",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-06-17"
+    },
+    {
+      "transactionId": "py_3TjJKX4W4pZWhSUs0BjNn3RV",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-06-17"
+    },
+    {
+      "transactionId": "ch_3Tl97E4W4pZWhSUs1iFeGfkw",
+      "grossCents": 6498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-06-22"
+    },
+    {
+      "transactionId": "ch_3TonoCRrkwwcYwep1fIXGchS",
+      "grossCents": 10498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-035",
+      "orderId": null,
+      "date": "2026-07-02"
+    },
+    {
+      "transactionId": "ch_3Tp8tnRrkwwcYwep012NNPQm",
+      "grossCents": 6999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-036",
+      "orderId": null,
+      "date": "2026-07-03"
+    },
+    {
+      "transactionId": "py_3TpOrX4W4pZWhSUs0bWli3kl",
+      "grossCents": 14498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-07-04"
+    },
+    {
+      "transactionId": "py_3TpPFc4W4pZWhSUs0s0z7zvu",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-07-04"
+    },
+    {
+      "transactionId": "py_3TpPJU4W4pZWhSUs1N3Am5Ht",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-07-04"
+    },
+    {
+      "transactionId": "ch_3TrNudRrkwwcYwep0kVBwEIg",
+      "grossCents": 3999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-037",
+      "orderId": null,
+      "date": "2026-07-09"
+    },
+    {
+      "transactionId": "ch_3TtjecRrkwwcYwep1xLy9t6o",
+      "grossCents": 3799,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-038",
+      "orderId": null,
+      "date": "2026-07-16"
+    },
+    {
+      "transactionId": "py_3TyuIF4W4pZWhSUs01ynUG53",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-07-30"
+    },
+    {
+      "transactionId": "py_3TyuTV4W4pZWhSUs00PZNqwe",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-07-30"
+    },
+    {
+      "transactionId": "ch_3TzcRERrkwwcYwep0rjIsUMl",
+      "grossCents": 2999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-039",
+      "orderId": null,
+      "date": "2026-08-01"
+    },
+    {
+      "transactionId": "ch_3U0cT94W4pZWhSUs0zCmlTCo",
+      "grossCents": 4746,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-08-04"
+    },
+    {
+      "transactionId": "ch_3U1Yc8RrkwwcYwep1XybNoro",
+      "grossCents": 3999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-040",
+      "orderId": null,
+      "date": "2026-08-06"
+    },
+    {
+      "transactionId": "ch_3U2vU2RrkwwcYwep04oD6I6g",
+      "grossCents": 6999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-041",
+      "orderId": null,
+      "date": "2026-08-10"
+    },
+    {
+      "transactionId": "py_3U44XP4W4pZWhSUs0AsseGiK",
+      "grossCents": 5248,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-08-13"
+    },
+    {
+      "transactionId": "py_3U5QyD4W4pZWhSUs1Lgk1VNp",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-08-17"
+    },
+    {
+      "transactionId": "py_3U5R2d4W4pZWhSUs0IA5ZBux",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-08-17"
+    },
+    {
+      "transactionId": "ch_3U5RyERrkwwcYwep07vHGBQU",
+      "grossCents": 3999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-042",
+      "orderId": null,
+      "date": "2026-08-17"
+    },
+    {
+      "transactionId": "ch_3U6no5RrkwwcYwep05NA53JR",
+      "grossCents": 8999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "eu-2026-043",
+      "orderId": null,
+      "date": "2026-08-21"
+    },
+    {
+      "transactionId": "py_3U7xmV4W4pZWhSUs1jsIcoHv",
+      "grossCents": 5397,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FT-LC-26-001",
+      "orderId": "cmt79ib3d0002l2044647smae",
+      "date": "2026-08-24"
+    },
+    {
+      "transactionId": "py_3U8bE54W4pZWhSUs0d0lZ0mq",
+      "grossCents": 5298,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FF-VI-26-003",
+      "orderId": "cmt9rrvrf0001k1042q05rzxt",
+      "date": "2026-08-26"
+    },
+    {
+      "transactionId": "ch_3U9K9m4W4pZWhSUs1IPbnlJU",
+      "grossCents": 2999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FT-TO-26-001",
+      "orderId": "cmtcmlgpv0002ld04pbuwptdm",
+      "date": "2026-08-28"
+    },
+    {
+      "transactionId": "ch_3U9KCm4W4pZWhSUs0BoXHsPT",
+      "grossCents": 2999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FT-TO-26-002",
+      "orderId": "cmtcmq7nt0008la04y9kintnz",
+      "date": "2026-08-28"
+    },
+    {
+      "transactionId": "ch_3UAa8I4W4pZWhSUs1NAjQZ84",
+      "grossCents": 8498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FF-SO-26-001",
+      "orderId": "cmthl1iuf0002ik044x8q7oe9",
+      "date": "2026-08-31"
+    },
+    {
+      "transactionId": "py_3UAtNU4W4pZWhSUs0GIsyQ6L",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FT-CS-26-007",
+      "orderId": "cmtit41020001kz049j33yqkk",
+      "date": "2026-09-01"
+    },
+    {
+      "transactionId": "py_3UAtR64W4pZWhSUs1GjkLyY7",
+      "grossCents": 3148,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FT-PA-26-009",
+      "orderId": "cmtit94se0001jt04x8q3maeg",
+      "date": "2026-09-01"
+    },
+    {
+      "transactionId": "ch_3UCKIc4W4pZWhSUs1QeFUJTm",
+      "grossCents": 10498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FF-MC-26-001",
+      "orderId": "cmtogl3qv0002l704velys6fj",
+      "date": "2026-09-05"
+    },
+    {
+      "transactionId": "ch_3UCNGm4W4pZWhSUs0Bj6kFOX",
+      "grossCents": 20498,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "FF-MC-26-002",
+      "orderId": "cmtonejl60002l5042ncu8z5s",
+      "date": "2026-09-05"
+    },
+    {
+      "transactionId": "ch_3UFsdS4W4pZWhSUs1jZEbaY6",
+      "grossCents": 2999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-09-15"
+    },
+    {
+      "transactionId": "ch_3UGKB9RrkwwcYwep0iX4YzwT",
+      "grossCents": 12999,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-09-16"
+    },
+    {
+      "transactionId": "ch_3UGhhKRrkwwcYwep0oDybDle",
+      "grossCents": 10998,
+      "canaleIncasso": "Stripe",
+      "orderNumber": "",
+      "orderId": null,
+      "date": "2026-09-17"
+    }
+  ],
+  "extraLedger": [
+    {
+      "key": "ORDER:cmub9oh3p0001jy04dxyb15dg",
+      "cents": 3148
+    },
+    {
+      "key": "ORDER:cmub9to8c000fl204aya67vhj",
+      "cents": 3148
+    },
+    {
+      "key": "CONNECT_TX:FF-VE-26-001",
+      "cents": 8999
+    },
+    {
+      "key": "MANUAL_INBOUND:cmpcb2j7y0004jv04xlc7wvb2",
+      "cents": 2999
+    },
+    {
+      "key": "MANUAL_INBOUND:cmrusit6y0000l8046wbck8a9",
+      "cents": 4498
+    },
+    {
+      "key": "STRIPE_TX:txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+      "cents": 3499
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "cents": 4746
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+      "cents": 3148
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3UFsdS4W4pZWhSUs1xLHuMvw",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3UGKB9RrkwwcYwep0aNuCa57",
+      "cents": 12999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+      "cents": 3799
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+      "cents": 8999
+    },
+    {
+      "key": "STRIPE_TX:txn_3TcirV4W4pZWhSUs05MMgxPE",
+      "cents": 5498
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+      "cents": 4397
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+      "cents": 10498
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+      "cents": 6498
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+      "cents": 6999
+    },
+    {
+      "key": "STRIPE_TX:txn_3U44XP4W4pZWhSUs0Ikhhvek",
+      "cents": 5248
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+      "cents": 3999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+      "cents": 3999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+      "cents": 6999
+    },
+    {
+      "key": "STRIPE_TX:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+      "cents": 3999
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+      "cents": 4746
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3U9K9m4W4pZWhSUs1N4SXPkI",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3U9KCm4W4pZWhSUs0wI7vlzm",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3UAa8I4W4pZWhSUs1ui4IlqC",
+      "cents": 8498
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj",
+      "cents": 10498
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ",
+      "cents": 20498
+    }
+  ],
+  "suppressed": [
+    {
+      "key": "JSON_ENTRY:entry_manual_gross_cmszsj71a0001l1047w7iat7v",
+      "cents": 4746
+    },
+    {
+      "key": "STRIPE_TX:txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "cents": 2999
+    },
+    {
+      "key": "STRIPE_TX:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "cents": 4746
+    }
+  ],
+  "refunds": [
+    {
+      "euro": "54,98",
+      "key": "STRIPE_REFUND:stripe_tx_txn_3TcirV4W4pZWhSUs00pnO7he",
+      "desc": "Rimborso Stripe — REFUND FOR CHARGE"
+    },
+    {
+      "euro": "29,99",
+      "key": "STRIPE_REFUND:stripe_eu_tx_txn_3THRDzRrkwwcYwep1VFhNywK",
+      "desc": "Rimborso Stripe — REFUND FOR CHARGE"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+---
+date: 21-09-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale Operativo FloreMoria — 21 Settembre 2026"
+sync_source: docs/verbali/21-09-2026.md
+synced_at: 2026-09-21T15:49:24.754Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/21-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# Verbale Operativo FloreMoria — 21 Settembre 2026
+
+**Redazione:** BARBARA / DEVIN (Cursor — chiusura giornata).  
+**Giornata di riferimento:** 2026-09-21.  
+**Freeze ufficiale:** `docs/verbali/2026-09-21-freeze-risultati.md` (riferimento di progetto; non usare snapshot precedenti).
+
+## Sezione 1 — Infrastruttura
+
+- `b03a769d` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
+
+## Sezione 2 — Strategia / Fiscale
+
+- Freeze ufficiale 21/09: **gestione −€8.200,47** · **esercizio −€3.602,81** · vendite CE **€4.000,80**.
+- IVA sistema: debito **€262,89** / credito **€1.194,06** (di cui ARC reverse charge €257,17 su entrambi i lati → netto invariato).
+- IVA detraibile recuperata da dedupe fattura>bonifico: **€591,84** (T1 €557,19 di cui DC Studio **€554,92**; T2 €22,10; T3 €12,55). Nota: `2026-09-21-iva-detraibile-recuperata.md`.
+- Gap corrispettivi €4.377,16 → CE: storico €1.098,65; chiuso PayPal €722,29; **residuo €376,36** (mismatch Stripe `ch_`/`py_` vs `txn_`) — non blocca LIPE. Ponte: `2026-09-21-riconciliazione-corrispettivi-ce.md`.
+- LIPE T2: invio commercialista a carico titolare (IVA debito trimestre €113,29; T1 credito sottostimato €554,92; aliquota 10% accessorietà).
+
+## Sezione 3 — Sviluppo
+
+- [2026-09-21 15:20] fix/fiscal: PayPal Europe €500→giroconto; namesCompatible token distintivi; METODO §6.2; report A/B/C + Δ€21,48 + C11 sola lettura.
+- [2026-09-21 15:55] fix/fiscal: V1–V3 consulenze/RAI/PayPal; gruppo B unattribuito + C alias Ferrante; C11 work-list Contabilità.
+- [2026-09-21 17:20] fix/fiscal: dedupe fattura>bonifico + IVA; rimborsi USCITA riducono ricavi; freeze 21/09.
+- [2026-09-21 17:49] fix/fiscal: riconciliazione corrispettivi↔CE; TD17→`AUTOFATTURE_REVERSE_CHARGE`; nota IVA €591,84; freeze rigenerato.
+
+### Codice / doc prodotti oggi
+- `lib/financial/partnerNameMatch.ts`, `floristInvoiceAutoMatch.ts`, `floristMissingInvoices.ts`
+- `lib/financial/historicalLedgerQuery.ts` / `historicalLedgerTypes.ts` — ARC + rimborsi + dedupe
+- `docs/verbali/2026-09-21-freeze-risultati.{md,json}`
+- `docs/verbali/2026-09-21-riconciliazione-corrispettivi-ce.{md,json}`
+- `docs/verbali/2026-09-21-iva-detraibile-recuperata.{md,json}`
+
+## Sezione 4 — Logistica
+
+- _Nessuna attività logistica registrata in questo verbale._
+
+## Sezione 5 — Aperti (non bloccanti LIPE)
+
+1. Gap residuo corrispettivi↔CE **€376,36** — work-list match Stripe charge/payment ↔ ledger txn.
+2. SDD gruppo A (PayPal→fioristi) sospeso in attesa V3 (0 COSTI_FIORISTI PayPal).

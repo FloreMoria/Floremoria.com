@@ -47,34 +47,22 @@ export type FloristAlertMeta = {
     overridePaymentDate?: string;
 };
 
-function normalizeName(s: string): string {
-    return s
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, ' ')
-        .trim();
-}
-
-function namesCompatible(a: string, b: string): boolean {
-    const na = normalizeName(a);
-    const nb = normalizeName(b);
-    if (!na || !nb) return false;
-    if (na.includes(nb) || nb.includes(na)) return true;
-    const tokens = na.split(' ').filter((t) => t.length > 3);
-    return tokens.some((t) => nb.includes(t));
-}
+import {
+    namesCompatible,
+    normalizePartnerName as normalizeName,
+    partnerNamesMatchDescription,
+} from '@/lib/financial/partnerNameMatch';
 
 function textContainsName(haystack: string, needle: string): boolean {
     const h = normalizeName(haystack);
     const n = normalizeName(needle);
     if (!h || !n || n.length < 3) return false;
     if (h.includes(n)) return true;
-    const parts = n.split(' ').filter((p) => p.length >= 3);
+    const parts = n.split(' ').filter((p) => p.length >= 4);
     if (parts.length >= 2) {
         return parts.filter((p) => h.includes(p)).length >= Math.min(2, parts.length);
     }
-    return parts.some((p) => h.includes(p));
+    return parts.some((p) => p.length >= 5 && h.split(' ').includes(p));
 }
 
 function daysBetween(from: Date, to: Date): number {
@@ -190,10 +178,14 @@ function isLikelyNonFloristBankDescription(description: string): boolean {
     const d = description.toUpperCase();
     return (
         /\bSDD\b/.test(d) ||
-        /PAYPAL EUROPE/.test(d) ||
+        /PAYPAL\s*\(?\s*EUROPE/.test(d) ||
+        /PAYPAL\s*\(EUROPE\)/.test(d) ||
+        /BENEFICIARIO:\s*PAYPAL/.test(d) ||
         /ADDEBITO SDD/.test(d) ||
         /STRIPE/.test(d) ||
-        /COMMISSIONI/.test(d)
+        /COMMISSIONI/.test(d) ||
+        /DC\s+STUDIO/.test(d) ||
+        /STUDIO\s+STP/.test(d)
     );
 }
 
@@ -261,6 +253,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                 id: true,
                 shopName: true,
                 ownerName: true,
+                internalNotes: true,
                 vatNumber: true,
                 taxCode: true,
                 email: true,
@@ -393,6 +386,13 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         const alertMeta = readFloristAlertMeta(line.rawJson);
         if (alertMeta.dismissedAt) continue;
 
+        const rawRoot =
+            line.rawJson && typeof line.rawJson === 'object'
+                ? (line.rawJson as Record<string, unknown>)
+                : {};
+        // Gruppo B: attribuzione rimossa → non ri-agganciare per nome; resta in lista lavoro.
+        if (rawRoot.awaitingPartnerAttribution === true) continue;
+
         const bankPayDate = line.accountingDate || line.valueDate;
         if (!bankPayDate || bankPayDate < lookback) continue;
 
@@ -407,12 +407,9 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             continue;
         }
 
+        // Nessun fallback: se il nome non corrisponde con certezza, resta non attribuito.
         let partner =
-            partners.find(
-                (p) =>
-                    namesCompatible(p.shopName, line.description) ||
-                    namesCompatible(p.ownerName || '', line.description)
-            ) || null;
+            partners.find((p) => partnerNamesMatchDescription(p, line.description)) || null;
 
         if (!partner && !floristType && !line.matchedOrderId) continue;
 

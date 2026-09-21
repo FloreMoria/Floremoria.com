@@ -249,10 +249,48 @@ export async function computeHistoricalPnl(opts: {
     let contributiEsercizioCents = 0;
     let rimborsiInRicaviCents = 0;
 
+    // TD17 reverse charge: effetto CE nullo; IVA debito = credito una sola volta per evento.
+    const arcVatByEvent = new Map<string, number>();
     for (const r of fiscalUsable) {
+        if (r.category !== 'AUTOFATTURE_REVERSE_CHARGE') continue;
+        const m = (r.sourceKey || '').match(/:(cmt[a-z0-9]+)/i);
+        const eventKey =
+            m?.[1] ||
+            (r.documentRef || '').trim() ||
+            r.sourceId ||
+            r.id;
+        const v = Math.abs(r.vatCents || 0) || Math.abs(r.totalCents);
+        const prev = arcVatByEvent.get(eventKey) || 0;
+        if (v > prev) arcVatByEvent.set(eventKey, v);
+    }
+    for (const v of arcVatByEvent.values()) {
+        ivaDebitoCents += v;
+        ivaCreditoCents += v;
+    }
+
+    for (const r of fiscalUsable) {
+        // Autofatture TD17: già conteggiate in IVA sopra; fuori ricavi/costi.
+        if (r.category === 'AUTOFATTURE_REVERSE_CHARGE') {
+            continue;
+        }
+
         // Partite di giro: cassa sì, ricavi/costi operativi no.
         if (isInternalTransferCategory(r.category)) {
             cashGatewayTransferCents += Math.abs(r.totalCents);
+            continue;
+        }
+
+        // Rimborso al cliente = riduzione di ricavo (mai un ricavo positivo, mai un costo operativo).
+        if (r.category === 'RIMBORSI' && (r.direction === 'USCITA' || r.totalCents < 0)) {
+            const absTotal = Math.abs(r.totalCents);
+            ricaviLordiCents -= absTotal;
+            venditeCaratteristicheCents -= absTotal;
+            rimborsiInRicaviCents -= absTotal;
+            ricaviNettiCents -= Math.abs(r.netCents);
+            // IVA a debito si riduce sul rimborso se presente
+            if (r.vatCents !== 0) {
+                ivaDebitoCents -= Math.abs(r.vatCents);
+            }
             continue;
         }
 

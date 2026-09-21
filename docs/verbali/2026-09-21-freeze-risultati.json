@@ -1,0 +1,65 @@
+{
+  "label": "FREEZE_UFFICIALE_2026-09-21_DEDUPE_FATTURA_RIMBORSI",
+  "at": "2026-09-21T15:48:57.316Z",
+  "replaces": null,
+  "engineNotes": [
+    "Dedupe costi: fattura passiva prevale sul bonifico (regolamento).",
+    "Rimborsi cliente (USCITA) riducono ricavi/vendite, non aumentano i costi.",
+    "Autofatture TD17 → AUTOFATTURE_REVERSE_CHARGE (effetto CE nullo; IVA debito/credito).",
+    "PayPal HAYUM vendite in RICAVI_VENDITE (non più ARCH_PAYPAL_NOT_GATEWAY)."
+  ],
+  "checks": {
+    "dcStudioKeepsInvoice": true,
+    "dcStudioDropsBank": true,
+    "dcStudioLedgerRows": [
+      {
+        "sourceKey": "BANK_LINE:cmt311c5f000sl4041s82u7pg",
+        "category": "CONSULENZE",
+        "totalCents": -377430,
+        "vatCents": 0
+      },
+      {
+        "sourceKey": "MANUAL_EXPENSE:cmt2q4dvb0019jl04xfxs7wfj",
+        "category": "CONSULENZE",
+        "totalCents": -377430,
+        "vatCents": -55492
+      }
+    ]
+  },
+  "cents": {
+    "ricaviLordi": 885243,
+    "venditeCaratteristiche": 400080,
+    "altriRicavi": 3281,
+    "contributiEsercizio": 459766,
+    "rimborsiInRicaviNet": 8121,
+    "costiFioristi": 268762,
+    "costiFatturePassiveSdi": 613409,
+    "costiSaas": 108004,
+    "costiOperativi": 217564,
+    "oneriBancari": 37785,
+    "ebitda": -322496,
+    "risultatoEsercizio": -360281,
+    "risultatoGestione": -820047,
+    "ivaDebito": 26289,
+    "ivaCredito": 119406,
+    "cashBank": 3229753
+  },
+  "euro": {
+    "ricaviLordi": "8852,43",
+    "venditeCaratteristiche": "4000,80",
+    "altriRicavi": "32,81",
+    "contributiEsercizio": "4597,66",
+    "rimborsiInRicaviNet": "81,21",
+    "costiFioristi": "2687,62",
+    "costiFatturePassiveSdi": "6134,09",
+    "costiSaas": "1080,04",
+    "costiOperativi": "2175,64",
+    "oneriBancari": "377,85",
+    "ebitda": "-3224,96",
+    "risultatoEsercizio": "-3602,81",
+    "risultatoGestione": "-8200,47",
+    "ivaDebito": "262,89",
+    "ivaCredito": "1194,06",
+    "cashBank": "32.297,53"
+  }
+}

@@ -42,6 +42,7 @@ import BankMovementsStatementTable from '@/components/dashboard/BankMovementsSta
 import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
 import DossierControlsBadge from '@/components/dashboard/DossierControlsBadge';
 import FloristInvoiceWorkListPanel from '@/components/dashboard/FloristInvoiceWorkListPanel';
+import PaymentOrderWorkListPanel from '@/components/dashboard/PaymentOrderWorkListPanel';
 import {
     FINANCE_TAB_STYLES,
     type FinanceMainTabId,
@@ -1490,6 +1491,8 @@ export default function FinanceDashboardPage() {
                                 </table>
                             </div>
                         </div>
+
+                        <PaymentOrderWorkListPanel />
 
                         <TaxQuarterlyPanel />
 

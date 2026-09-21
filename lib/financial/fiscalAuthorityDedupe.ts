@@ -37,6 +37,7 @@ export type FiscalDedupableEntry = {
     documentRef?: string | null;
     accountingDate?: Date | string | null;
     totalCents: number;
+    vatCents?: number | null;
     direction?: string | null;
     category?: string | null;
     bankLineId?: string | null;
@@ -233,10 +234,17 @@ export function naturalFiscalKey(r: FiscalDedupableEntry): string {
 }
 
 function authorityRank(r: FiscalDedupableEntry): number {
-    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 100;
+    // Costo documentale (fattura) prevale sul bonifico: il CE tiene il documento, la banca è regolamento.
+    if (r.sourceType === 'MANUAL_EXPENSE') {
+        const meta = asMeta(r.metadataJson);
+        const docType = String(meta.docType || meta.docKind || '').toUpperCase();
+        if (docType === 'FATTURA' || Math.abs(r.vatCents || 0) > 0) return 110;
+        if (docType === 'SCONTRINO' || docType === 'RICEVUTA') return 95;
+        return 85;
+    }
+    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 80;
     if (FISCAL_AUTHORITY_SOURCE_TYPES.has(r.sourceType)) return 100;
     if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 90;
-    if (r.sourceType === 'MANUAL_EXPENSE') return 75;
     if (r.sourceType === 'FLORIST_PAYOUT') return 70;
     if (r.sourceType === 'ORDER') return 40;
     if (r.sourceType === 'JSON_ENTRY') return 20;
@@ -692,16 +700,17 @@ export function reconciledPaymentGroupKey(r: FiscalDedupableEntry): string | nul
 }
 
 function reconciledPrimaryRank(r: FiscalDedupableEntry): number {
-    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 100;
-    if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 95;
-    if (r.sourceType === 'FLORIST_PAYOUT') return 50;
+    // Fattura passiva = costo di CE; bonifico = regolamento (allegato), non seconda riga di costo.
     if (r.sourceType === 'MANUAL_EXPENSE') {
         const meta = asMeta(r.metadataJson);
         const docType = String(meta.docType || '').toUpperCase();
-        if (docType === 'FATTURA') return 65;
-        if (docType === 'SCONTRINO') return 40;
-        return 45;
+        if (docType === 'FATTURA' || Math.abs(r.vatCents || 0) > 0) return 110;
+        if (docType === 'SCONTRINO') return 90;
+        return 88;
     }
+    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 70;
+    if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 95;
+    if (r.sourceType === 'FLORIST_PAYOUT') return 50;
     if (r.sourceType === 'JSON_ENTRY') return 20;
     return 50;
 }
@@ -818,8 +827,8 @@ export function buildReconciledPaymentGroups<T extends FiscalDedupableEntry>(
 }
 
 /**
- * Un movimento bancario riconciliato prevale: documenti fiscali e JSON locali
- * non generano righe contabili separate ma restano come allegati sulla primaria.
+ * Un movimento documentale riconciliato (fattura) prevale sul bonifico:
+ * il CE tiene la fattura; la banca resta come allegato/regolamento.
  */
 export function consolidateReconciledPayments<T extends FiscalDedupableEntry>(rows: T[]): T[] {
     const groups = buildReconciledPaymentGroups(rows);
@@ -866,7 +875,7 @@ export function excludeJsonExpensesCoveredByReconciledPayment<T extends FiscalDe
 
 /**
  * Union-find: collassa scontrini/manuali/compensi sullo stesso bonifico/ordine/TRN.
- * Se esiste il flusso bancario reale, resta UNICA riga di uscita (documenti → allegati).
+ * Se esiste la fattura passiva, resta UNICA riga di costo CE (bonifico → allegato regolamento).
  */
 export function consolidateAuthorityOutflows<T extends FiscalDedupableEntry>(rows: T[]): T[] {
     const candidates = rows
@@ -984,12 +993,54 @@ export function consolidateAuthorityOutflows<T extends FiscalDedupableEntry>(row
 }
 
 /**
- * Se esiste già un'autorità di cassa (banca/gateway) per lo stesso ordine+importo,
- * elimina uscite subordinate residue (compenso/scontrino/JSON) non catturate dal cluster.
+ * Se esiste una fattura passiva per lo stesso ordine/vendor+importo, il bonifico Fineco
+ * non genera una seconda riga di CE (è regolamento). I documenti MANUAL_EXPENSE/FATTURA
+ * non vengono più soppressi a favore della banca.
+ * Se non ci sono fatture in gerarchia, resta il comportamento legacy (banca tiene).
  */
 export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDedupableEntry>(
     rows: T[]
 ): T[] {
+    const invoiceOrderAmounts = new Set<string>();
+    const invoiceVendorAmounts: Array<{ tokens: Set<string>; abs: number }> = [];
+
+    for (const r of rows) {
+        if (!isOutflowExpense(r)) continue;
+        const isInvoice =
+            r.sourceType === 'MANUAL_EXPENSE' &&
+            (String(asMeta(r.metadataJson).docType || '').toUpperCase() === 'FATTURA' ||
+                Math.abs(r.vatCents || 0) > 0);
+        if (!isInvoice) continue;
+        const abs = Math.abs(r.totalCents);
+        const orderRef = extractOrderBusinessRef(r);
+        if (orderRef) invoiceOrderAmounts.add(`${orderRef}|${abs}`);
+        invoiceVendorAmounts.push({ tokens: significantVendorTokens(expenseVendorBlob(r)), abs });
+    }
+
+    if (invoiceOrderAmounts.size || invoiceVendorAmounts.length) {
+        return rows.filter((r) => {
+            if (!isOutflowExpense(r)) return true;
+            const isBank = r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL';
+            if (!isBank) return true;
+
+            const abs = Math.abs(r.totalCents);
+            const orderRef = extractOrderBusinessRef(r);
+            if (orderRef && invoiceOrderAmounts.has(`${orderRef}|${abs}`)) return false;
+
+            const tokens = significantVendorTokens(expenseVendorBlob(r));
+            if (tokens.size) {
+                for (const inv of invoiceVendorAmounts) {
+                    if (inv.abs !== abs) continue;
+                    for (const t of tokens) {
+                        if (inv.tokens.has(t)) return false;
+                    }
+                }
+            }
+            return true;
+        });
+    }
+
+    // Legacy: nessuna fattura → banca/gateway tiene, documenti subordinati via.
     const authorityOrderAmounts = new Set<string>();
     const authorityVendorAmounts: Array<{ tokens: Set<string>; abs: number }> = [];
 

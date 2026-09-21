@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.26 — 20 settembre 2026.
+Versione 1.27 — 21 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -324,6 +324,17 @@ Finanziamento soci · Da classificare
 | commissione trattenuta da Stripe | Commissioni gateway | costo, con autofattura |
 | canone o imposta di bollo del conto | Oneri bancari | |
 | spesa SaaS / fornitore pagata da PayPal | Costi (SaaS / operative) / Conto PayPal | **costo CE**, non riduzione di ricavo |
+
+**Attribuzione partner ↔ beneficiario bancario (principio).** Il match sul nome
+confronta solo token **distintivi** (cognome, ragione sociale propria, insegna unica).
+Sono esclusi dal confronto i token generici: STUDIO, FLOWERS, FIORI, FIORERIA, GARDEN,
+FLORA, SRL, SNC, DI, EUROPE (e equivalenti). Un match non può reggersi su un solo token
+generico. **Non esiste fallback** al «primo partner in lista» né a un default quando il
+match fallisce.
+
+Quando il beneficiario **non** corrisponde con certezza a un partner anagrafico, il
+movimento resta **non attribuito** e compare in una **lista di lavoro**. Mai attribuito
+a un partner arbitrario. Un’attribuzione mancante si vede; una sbagliata no.
 
 **La regola generale**: il ricavo nasce quando il cliente paga, non quando i soldi
 arrivano in banca. Il passaggio dal gateway alla banca è uno spostamento di soldi già
@@ -809,6 +820,12 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.27 — 21 settembre 2026**
+- §6.2 — principio attribuzione partner↔beneficiario: solo token distintivi (esclusi
+  STUDIO/FLOWERS/FIORI/…); nessun fallback a partner arbitrario; incerto → lista di lavoro.
+- Bonifico Fineco→PayPal Europe = giroconto (stessa natura SDD Add To Balance), mai
+  COSTI_FIORISTI.
 
 **1.26 — 20 settembre 2026**
 - §8.3 — **aliquota unica 10%** su tutto il corrispettivo vendita (accessorietà; conferma

@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-09-21T15:47:53.287Z",
+  "totalVatCents": 59184,
+  "byQuarterCents": {
+    "1": 55719,
+    "2": 2210,
+    "3": 1255,
+    "4": 0
+  },
+  "rows": [
+    {
+      "vendor": "Battistella Fioreria srl",
+      "totalEuro": "50,00",
+      "vatEuro": "4,55",
+      "quarter": 2,
+      "expenseDate": "2026-06-30",
+      "bankLineId": "cmt3dsdfx0016h1047oqorznz",
+      "kept": "MANUAL_EXPENSE:cmt2q43660000jl04rbyucxci"
+    },
+    {
+      "vendor": "BONFANTE CLAUDIA",
+      "totalEuro": "40,00",
+      "vatEuro": "3,64",
+      "quarter": 2,
+      "expenseDate": "2026-06-23",
+      "bankLineId": "cmt1vc6ul001xky04oan8y49b",
+      "kept": "MANUAL_EXPENSE:cmt1wo0oj000bjo04pm2wydl1"
+    },
+    {
+      "vendor": "TORRE DOMENICA",
+      "totalEuro": "62,00",
+      "vatEuro": "11,18",
+      "quarter": 2,
+      "expenseDate": "2026-06-19",
+      "bankLineId": "cmt3dsdfx0014h1043fmznuir",
+      "kept": "MANUAL_EXPENSE:cmt1wnw6d0001jo04z5svnhhl"
+    },
+    {
+      "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+      "totalEuro": "30,00",
+      "vatEuro": "2,73",
+      "quarter": 2,
+      "expenseDate": "2026-06-16",
+      "bankLineId": "cmt1vc6ul001qky04dc5a9tcs",
+      "kept": "MANUAL_EXPENSE:cmt1wo19p000djo04esjn9cvv"
+    },
+    {
+      "vendor": "Battistella Fioreria srl",
+      "totalEuro": "25,00",
+      "vatEuro": "2,27",
+      "quarter": 1,
+      "expenseDate": "2026-01-31",
+      "bankLineId": "cmt311c5f000fl40405ob7gvw",
+      "kept": "MANUAL_EXPENSE:cmt2q4gzm001tjl040ra76aha"
+    },
+    {
+      "vendor": "Battistella Fioreria srl",
+      "totalEuro": "138,00",
+      "vatEuro": "12,55",
+      "quarter": 3,
+      "expenseDate": "2026-08-31",
+      "bankLineId": "cmtjv4a300005l804g1fga9tt",
+      "kept": "MANUAL_EXPENSE:cmtjxel1a0000jv04lta819f8"
+    },
+    {
+      "vendor": "DC STUDIO STP SRL",
+      "totalEuro": "3774,30",
+      "vatEuro": "554,92",
+      "quarter": 1,
+      "expenseDate": "2026-03-02",
+      "bankLineId": "cmt311c5f000sl4041s82u7pg",
+      "kept": "MANUAL_EXPENSE:cmt2q4dvb0019jl04xfxs7wfj"
+    }
+  ]
+}

@@ -8,6 +8,11 @@ export const LEDGER_CATEGORIES = [
     /** Contributi pubblici in conto esercizio (es. CCIAA) — nel CE, fuori dalle vendite. */
     'CONTRIBUTI_ESERCIZIO',
     'RIMBORSI',
+    /**
+     * Autofatture TD17 / reverse charge servizi esteri.
+     * IVA a debito = IVA a credito; effetto nullo su ricavi e sul risultato.
+     */
+    'AUTOFATTURE_REVERSE_CHARGE',
     'PAYPAL_PAYOUT',
     /** Giroconto gateway → banca Fineco: non è ricavo di vendita. */
     'TRASFERIMENTO_INTERNO',
@@ -139,9 +144,11 @@ export function categorizeManualExpense(opts: {
         source === 'AUTOFATTURA_TD17' ||
         source === 'AUTOFATTURA_TD18' ||
         meta.isReverseCharge ||
-        meta.isForeignAutofattura
+        meta.isForeignAutofattura ||
+        /AUTOFATTURA\s*TD17|REVERSE\s*CHARGE|TD17/.test(blob)
     ) {
-        return 'SPESE_SAAS';
+        // IVA a debito = IVA a credito; fuori ricavi e fuori costi (effetto CE nullo).
+        return 'AUTOFATTURE_REVERSE_CHARGE';
     }
     // Compensi / scontrini fioristi (upload Passivo o SDI)
     if (
@@ -222,6 +229,7 @@ export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     ALTRI_RICAVI: 'Altri ricavi e proventi',
     CONTRIBUTI_ESERCIZIO: 'Contributi pubblici (altri ricavi — non vendite)',
     RIMBORSI: 'Rimborsi ricevuti',
+    AUTOFATTURE_REVERSE_CHARGE: 'Autofatture reverse charge (TD17 — effetto CE nullo)',
     PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
     TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',
     DA_CLASSIFICARE: 'Da classificare (partite aperte)',

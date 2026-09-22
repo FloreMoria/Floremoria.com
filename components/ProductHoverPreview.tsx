@@ -6,13 +6,23 @@ import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 import Image from 'next/image';
 import { buildProductAlt } from '@/utils/altText';
+import {
+    isDualDestinationProduct,
+    type FloremOrderDestination,
+} from '@/lib/floremDualDestination';
+import type { ProductCatalogContext } from '@/lib/productUrls';
 
 interface ProductHoverPreviewProps {
     product: Product;
     selectedImage?: string;
+    catalogContext?: ProductCatalogContext;
 }
 
-export default function ProductHoverPreview({ product, selectedImage }: ProductHoverPreviewProps) {
+export default function ProductHoverPreview({
+    product,
+    selectedImage,
+    catalogContext,
+}: ProductHoverPreviewProps) {
     const previewRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<'right' | 'left'>('right');
     const [qty, setQty] = useState(1);
@@ -20,11 +30,33 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
     const [toastMsg, setToastMsg] = useState('');
     const [cartCategoryModalOpen, setCartCategoryModalOpen] = useState(false);
 
-    const finalizePreviewCart = (baseCart: { productId: string; slug?: string; name?: string; priceCents: number; qty: number }[]) => {
+    const isDual = isDualDestinationProduct(product);
+    const destination: FloremOrderDestination =
+        catalogContext === 'funerale' ? 'FF' : catalogContext === 'cimitero' ? 'FT' : isDual ? 'FT' : product.category === 'funerale' ? 'FF' : 'FT';
+
+    const finalizePreviewCart = (
+        baseCart: {
+            productId: string;
+            slug?: string;
+            name?: string;
+            priceCents: number;
+            qty: number;
+            orderCategory?: string;
+            customData?: Record<string, unknown>;
+        }[]
+    ) => {
         let cart = [...baseCart];
         const existingItemIndex = cart.findIndex((item) => item.productId === product.id);
         if (existingItemIndex >= 0) {
             cart[existingItemIndex].qty += qty;
+            if (isDual) {
+                cart[existingItemIndex].orderCategory = destination;
+                cart[existingItemIndex].customData = {
+                    ...(cart[existingItemIndex].customData || {}),
+                    orderCategory: destination,
+                    destination,
+                };
+            }
         } else {
             cart.push({
                 productId: product.id,
@@ -32,6 +64,10 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
                 name: product.name,
                 priceCents: Math.round(product.price * 100),
                 qty: qty,
+                ...(isDual ? { orderCategory: destination } : {}),
+                customData: isDual
+                    ? { orderCategory: destination, destination }
+                    : undefined,
             });
         }
 
@@ -49,7 +85,7 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
         const cartStr = localStorage.getItem('fm_cart');
         const cart = cartStr ? JSON.parse(cartStr) : [];
 
-        if (!canAddProductToCart(cart, product)) {
+        if (!canAddProductToCart(cart, product, isDual ? { destination } : undefined)) {
             setCartCategoryModalOpen(true);
             return;
         }

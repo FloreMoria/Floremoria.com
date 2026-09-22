@@ -27,7 +27,7 @@ export default function CatalogPage() {
                 </p>
             </section>
 
-            <ProductGrid products={cemeteryProducts} />
+            <ProductGrid products={cemeteryProducts} catalogContext="cimitero" />
 
             <section className="bg-white rounded-[22px] lg:rounded-[40px] px-5 py-5 sm:p-7 lg:p-12 text-center max-w-4xl mx-auto shadow-lg border border-gray-100 mt-8 md:mt-12 space-y-3 sm:space-y-5">
                 <h2 className="text-[22px] sm:text-[28px] font-display font-semibold text-fm-text leading-snug">

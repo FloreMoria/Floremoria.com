@@ -12,7 +12,7 @@ import {
 } from '@/lib/financial/paypalSalesReport';
 
 export type GatewayIncassoLike = {
-    gateway: 'Stripe' | 'PayPal';
+    gateway: 'Stripe' | 'PayPal' | 'PayPal (via Stripe)';
     transactionId: string;
     grossCents: number;
     paymentDate: Date;
@@ -28,8 +28,12 @@ function normTx(id: string): string {
     return id.trim().toLowerCase();
 }
 
+function isStripeChannel(g: GatewayIncassoLike): boolean {
+    return g.gateway === 'Stripe' || g.gateway === 'PayPal (via Stripe)';
+}
+
 function isStripeRefundTx(g: GatewayIncassoLike): boolean {
-    if (g.gateway !== 'Stripe') return false;
+    if (!isStripeChannel(g)) return false;
     if (g.grossCents < 0) return true;
     const blob = `${g.transactionId} ${g.channelBlob}`.toLowerCase();
     return /\bre_/.test(blob) || /refund/.test(blob);
@@ -65,7 +69,7 @@ export function filterGatewayIncassiForCorrispettivi(
     };
 
     const paypal = incassi.filter((g) => g.gateway === 'PayPal');
-    const stripe = incassi.filter((g) => g.gateway === 'Stripe');
+    const stripe = incassi.filter((g) => isStripeChannel(g));
 
     // 1) PayPal: solo vendite report / ordine
     let paypalConfirmed = new Set<string>();

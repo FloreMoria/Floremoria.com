@@ -34,8 +34,8 @@ async function main() {
         'IVA EUR',
         'Totale lordo EUR',
     ]);
-    f2.addRow(['2026-05-03', 'FT-MC-26-007', 'Stripe', 259, 10, 25.9, 284.9]);
-    f2.addRow(['2026-05-19', 'DA_COLLEGARE', 'Stripe', 31.81, 10, 3.18, 34.99]);
+    f2.addRow(['03/05/2026', 'FT-MC-26-007', 'Stripe', 259, 10, 25.9, 284.9]);
+    f2.addRow(['19/05/2026', 'py_3ExampleUnlinkedTx', 'PayPal (via Stripe)', 31.81, 10, 3.18, 34.99]);
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
     await assertCommercialistaCorrispettiviPrivacy(buffer);

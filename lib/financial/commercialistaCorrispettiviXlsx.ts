@@ -19,8 +19,6 @@ import {
 import { VAT_PCT_FLORAL } from '@/lib/financial/vat';
 
 const EUR_FORMAT = '€ #,##0.00';
-const DATE_FORMAT = 'DD/MM/YYYY';
-const DA_COLLEGARE = 'DA_COLLEGARE';
 const LORDO_TOLERANCE_CENTS = 1;
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -152,7 +150,33 @@ function euroNum(cents: number): number {
 function parseYmd(ymd: string): Date | null {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
     if (!m) return null;
+    // Mezzogiorno locale: evita shift giorno in Excel; l'orario non viene esportato (solo stringa data).
     return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0);
+}
+
+/** Data solo calendario DD/MM/YYYY — niente componente orario in cella. */
+function formatDateOnlyIt(ymd: string): string {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    const d = parseYmd(ymd);
+    if (!d) return ymd.trim();
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+/**
+ * Riferimento ordine verificabile: codice FM/FT se collegato, altrimenti id transazione gateway.
+ * Non usare etichette interne tipo DA_COLLEGARE nel foglio commercialista.
+ */
+export function orderRefForExport(
+    orderNumber: string | null | undefined,
+    transactionId?: string | null
+): string {
+    const n = (orderNumber || '').trim();
+    if (n) return n;
+    const tx = (transactionId || '').trim();
+    return tx || '—';
 }
 
 function styleHeaderRow(row: ExcelJS.Row) {
@@ -196,11 +220,6 @@ function periodLabel(period: CommercialistaPeriod): string {
 export function commercialistaCorrispettiviFilename(period: CommercialistaPeriod): string {
     const p = period.kind === 'year' ? 'ANNO' : `T${period.quarter}`;
     return `FloreMoria_${period.year}_${p}_Corrispettivi.xlsx`;
-}
-
-function orderRefForExport(orderNumber: string | null | undefined): string {
-    const n = (orderNumber || '').trim();
-    return n || DA_COLLEGARE;
 }
 
 function sumCorrispettiviFromReport(report: TaxQuarterlyReport): CommercialistaCorrispettiviTotals {
@@ -408,7 +427,7 @@ export async function loadCostiSenzaDocumento(
             amountCents: r.amountCents,
             deliveryDate: deliveryIso,
             prepaidFlag: prepaid ? 'S' : 'N',
-            prepaidParentOrderRef: prepaid ? parentRef || DA_COLLEGARE : '',
+            prepaidParentOrderRef: prepaid ? parentRef || '—' : '',
         });
     }
 
@@ -489,11 +508,7 @@ function buildF1(
     ]);
     ws.addRow([
         'Nota 3',
-        'Foglio F3 (costi fiorista senza documento) sospeso: rientrerà quando l’abbinamento bonifici→consegne sarà corretto. Non usare i movimenti bancari come proxy del costo per consegna.',
-    ]);
-    ws.addRow([
-        'Nota 4',
-        'Prima di chiudere il trimestre caricare l’estratto conto Fineco aggiornato in Contabilità → Movimenti bancari.',
+        'I costi verso i fioristi sono comunicati separatamente.',
     ]);
 
     autofitColumns(ws, 14, 72);
@@ -558,10 +573,10 @@ function buildF2(
 
     for (const r of sorted) {
         const rate = r.vatRate || VAT_PCT_FLORAL;
-        const dateVal = parseYmd(r.paymentDate || r.date);
+        const dateStr = formatDateOnlyIt(r.paymentDate || r.date);
         const row = ws.addRow([
-            dateVal || r.paymentDate || r.date,
-            orderRefForExport(r.orderNumber),
+            dateStr,
+            orderRefForExport(r.orderNumber, r.transactionId),
             r.gateway || '',
             euroNum(r.imponibileCents),
             rate,
@@ -569,7 +584,6 @@ function buildF2(
             euroNum(r.grossCents),
         ]);
         applyBorders(row);
-        if (dateVal) row.getCell(1).numFmt = DATE_FORMAT;
         for (const col of [4, 6, 7]) {
             row.getCell(col).numFmt = EUR_FORMAT;
         }
@@ -652,18 +666,16 @@ function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): 
 
     let total = 0;
     for (const r of rows) {
-        const d = parseYmd(r.deliveryDate);
         const row = ws.addRow([
             r.orderNumber,
             r.floristName,
             euroNum(r.amountCents),
-            d || r.deliveryDate,
+            formatDateOnlyIt(r.deliveryDate),
             r.prepaidFlag,
             r.prepaidParentOrderRef,
         ]);
         applyBorders(row);
         row.getCell(3).numFmt = EUR_FORMAT;
-        if (d) row.getCell(4).numFmt = DATE_FORMAT;
         total += r.amountCents;
     }
 

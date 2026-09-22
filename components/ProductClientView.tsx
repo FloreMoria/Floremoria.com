@@ -20,14 +20,32 @@ import {
 import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 import GoogleSocialProofBadge from '@/components/GoogleSocialProofBadge';
+import OmaggioDestinationSelector from '@/components/OmaggioDestinationSelector';
+import {
+    catalogCategoryForDestination,
+    isDualDestinationProduct,
+    type FloremOrderDestination,
+} from '@/lib/floremDualDestination';
 
 interface ProductClientViewProps {
     product: Product;
     relatedProducts: Product[];
     initialComune?: string;
+    /** Contesto navigazione: FT da tombe, FF da funerale (piante duali). */
+    destinationHint?: FloremOrderDestination;
 }
 
-function catalogBackLink(category: Product['category']) {
+function catalogBackLink(
+    category: Product['category'],
+    destination: FloremOrderDestination | null,
+    dual: boolean
+) {
+    if (dual && destination === 'FT') {
+        return { href: '/fiori-sulle-tombe', label: 'Torna a Fiori sulle tombe' };
+    }
+    if (dual && destination === 'FF') {
+        return { href: '/per-il-funerale', label: 'Torna a Fiori per il funerale' };
+    }
     if (category === 'funerale') {
         return { href: '/per-il-funerale', label: 'Torna a Fiori per il funerale' };
     }
@@ -37,9 +55,18 @@ function catalogBackLink(category: Product['category']) {
     return { href: '/fiori-sulle-tombe', label: 'Torna a Fiori sulle tombe' };
 }
 
-export default function ProductClientView({ product, relatedProducts, initialComune = '' }: ProductClientViewProps) {
+export default function ProductClientView({
+    product,
+    relatedProducts,
+    initialComune = '',
+    destinationHint,
+}: ProductClientViewProps) {
     const router = useRouter();
-    const backToCatalog = catalogBackLink(product.category);
+    const isDual = isDualDestinationProduct(product);
+    const [destination, setDestination] = useState<FloremOrderDestination>(
+        destinationHint || (product.category === 'funerale' && !isDual ? 'FF' : 'FT')
+    );
+    const backToCatalog = catalogBackLink(product.category, isDual ? destination : null, isDual);
     const [qty, setQty] = useState(1);
     const [comune, setComune] = useState(initialComune);
     const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -70,8 +97,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         ]
     };
     
-    const categoryKey = product.category;
-    const coverageLabel = product.category === 'cimitero' ? 'Verifica Copertura Cimitero' : 'Verifica Copertura Comune';
+    const categoryKey = isDual
+        ? catalogCategoryForDestination(destination)
+        : product.category;
+    const coverageLabel = categoryKey === 'cimitero' ? 'Verifica Copertura Cimitero' : 'Verifica Copertura Comune';
     const availableAddons =
         product.isBouquet && categoryKey ? (addonsMapping[categoryKey] ?? []) : [];
     
@@ -112,7 +141,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     // FT: ripristina optional «foto prima» da preferenza (es. home). FF/PA: rimuovi id orfano dallo stato.
     useEffect(() => {
         if (!product.isBouquet) return;
-        if (product.category !== 'cimitero') {
+        if (categoryKey !== 'cimitero') {
             setSelectedAddons((prev) => prev.filter((id) => id !== FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID));
             return;
         }
@@ -121,7 +150,23 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         setSelectedAddons((prev) =>
             prev.includes(FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID) ? prev : [...prev, FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID]
         );
-    }, [product.category, product.isBouquet, product.id]);
+    }, [categoryKey, product.isBouquet, product.id]);
+
+    // Sync hint se cambia (navigazione client rara)
+    useEffect(() => {
+        if (destinationHint) setDestination(destinationHint);
+    }, [destinationHint]);
+
+    // Cambio destinazione: accessori FF vs FT non si mescolano
+    useEffect(() => {
+        if (!isDual) return;
+        setSelectedAddons((prev) => {
+            const allowed = new Set(
+                (addonsMapping[catalogCategoryForDestination(destination)] || []).map((a) => a.id)
+            );
+            return prev.filter((id) => allowed.has(id));
+        });
+    }, [destination, isDual]);
 
     const [customMessage, setCustomMessage] = useState('');
     const [variantColor, setVariantColor] = useState('Rosso');
@@ -203,6 +248,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             name?: string;
             priceCents?: number;
             qty: number;
+            orderCategory?: string;
             customData?: Record<string, unknown>;
         }[];
 
@@ -227,6 +273,16 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
         if (existingItemIndex >= 0) {
             cart[existingItemIndex].qty += qty;
+            if (isDual) {
+                const prev = cart[existingItemIndex];
+                prev.orderCategory = destination;
+                prev.customData = {
+                    ...(prev.customData || {}),
+                    orderCategory: destination,
+                    destination,
+                    comune: comune || (prev.customData as { comune?: string } | undefined)?.comune,
+                };
+            }
         } else {
             const newItem: Record<string, unknown> = {
                 productId: product.id,
@@ -234,8 +290,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 name: product.name,
                 priceCents: Math.round(product.price * 100),
                 qty: qty,
+                ...(isDual ? { orderCategory: destination } : {}),
                 customData: {
                     comune,
+                    ...(isDual ? { orderCategory: destination, destination } : {}),
                     ...(product.slug === 'bouquet-di-rose' ? { variantColor } : {}),
                     ...(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' ? { customMessage } : {}),
                 },
@@ -254,8 +312,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         name: addonConfig.name,
                         priceCents: Math.round(addonConfig.price * 100),
                         qty: 1,
+                        ...(isDual ? { orderCategory: destination } : {}),
                         customData: {
                             comune,
+                            ...(isDual ? { orderCategory: destination, destination } : {}),
                             ...(realProduct.slug === 'messaggio' || realProduct.slug === 'nastro-commemorativo' ? { customMessage } : {}),
                         },
                     });
@@ -272,7 +332,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     const handleAddToCart = () => {
         const cartStr = localStorage.getItem('fm_cart');
         const cart = cartStr ? JSON.parse(cartStr) : [];
-        if (!canAddProductToCart(cart, product)) {
+        if (!canAddProductToCart(cart, product, isDual ? { destination } : undefined)) {
             setCartCategoryModalOpen(true);
             return;
         }
@@ -374,7 +434,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     const addonFotoPrima = availableAddons.find((a) => a.id === FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID);
     const addonLuminoFt = availableAddons.find((a) => a.id === 'c2');
     const useFtCompletaGrid =
-        product.category === 'cimitero' &&
+        categoryKey === 'cimitero' &&
         availableAddons.length === 3 &&
         Boolean(addonMessaggio && addonFotoPrima && addonLuminoFt);
 
@@ -574,7 +634,14 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                             </div>
 
-                            <div className="pt-4 border-t border-gray-100">
+                            <div className="pt-4 border-t border-gray-100 space-y-4">
+                                {isDual && (
+                                    <OmaggioDestinationSelector
+                                        value={destination}
+                                        onChange={setDestination}
+                                        idPrefix={`pdp-${product.slug}`}
+                                    />
+                                )}
                                 <div className="flex items-center gap-3">
                                     {/* Quantity */}
                                     <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden h-12 flex-shrink-0">
@@ -625,7 +692,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                 </span>
                                 <p className="text-[13px] text-gray-700 font-medium leading-snug">
                                     <strong className="text-gray-900 block mb-0.5">Certificazione fotografica</strong>
-                                    {product.category === 'cimitero' ? (
+                                    {categoryKey === 'cimitero' ? (
                                         <>
                                             Due foto su WhatsApp: lo stato del luogo prima della posa (su richiesta, 1,49&nbsp;€) e la
                                             foto dopo la posa — quest&apos;ultima sempre gratuita.
@@ -706,7 +773,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             </p>
 
                             <p>
-                                {product.category === 'cimitero' ? (
+                                {categoryKey === 'cimitero' ? (
                                     <>
                                         <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo
                                         l&apos;importanza della memoria. Puoi ricevere due scatti su WhatsApp: lo stato del luogo prima
@@ -771,7 +838,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <div>
                                 <h4 className="font-semibold text-fm-text">Foto su WhatsApp</h4>
                                 <p className="text-sm text-fm-muted">
-                                    {product.category === 'cimitero'
+                                    {categoryKey === 'cimitero'
                                         ? "Riceverai le foto di conferma: prima (opzionale) e dopo la posa, quest'ultima sempre gratuita."
                                         : "Riceverai gratuitamente la foto dei fiori dopo l'allestimento."}
                                 </p>
@@ -797,7 +864,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                             </span>
                             <span className="font-medium leading-relaxed">
-                                {product.category === 'cimitero'
+                                {categoryKey === 'cimitero'
                                     ? 'Invio su WhatsApp delle foto di conferma (prima opzionale e dopo la posa, gratuita)'
                                     : "Invio su WhatsApp della foto gratuita dopo l'allestimento"}
                             </span>

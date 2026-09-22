@@ -1,6 +1,7 @@
 import { products, getProductBySlug } from '@/lib/products';
 import { getProductUrl } from '@/lib/productUrls';
 import { getPdpCrossSellProducts } from '@/lib/getPdpCrossSellProducts';
+import { isDualDestinationProduct } from '@/lib/floremDualDestination';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import ProductClientView from '@/components/ProductClientView';
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     if (!product) {
         return { title: 'Omaggio floreale non trovato' };
     }
-    const nativeUrl = getProductUrl(product);
+    const nativeUrl = getProductUrl(product, 'cimitero');
     const siteBase =
         process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
         process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
@@ -53,12 +54,15 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         notFound();
     }
 
-    const nativeUrl = getProductUrl(product);
-    if (!nativeUrl.startsWith('/fiori-sulle-tombe/')) {
+    const allowedOnTombs =
+        product.category === 'cimitero' || isDualDestinationProduct(product);
+    if (!allowedOnTombs) {
+        const nativeUrl = getProductUrl(product);
         const query = resolvedSearchParams.loc ? `?loc=${encodeURIComponent(resolvedSearchParams.loc)}` : '';
         permanentRedirect(`${nativeUrl}${query}`);
     }
 
+    const pageUrl = getProductUrl(product, 'cimitero');
     const relatedProducts = getPdpCrossSellProducts(product, 3);
 
     const initialComune = resolvedSearchParams.loc ? decodeURIComponent(resolvedSearchParams.loc).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
@@ -75,7 +79,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         "description": "Omaggio floreale consegnato da fiorista locale con foto su WhatsApp",
         "price": product.price,
         "priceCurrency": "EUR",
-        "url": `${siteBase}${nativeUrl}`
+        "url": `${siteBase}${pageUrl}`
     };
 
     return (
@@ -84,7 +88,12 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
             />
-            <ProductClientView product={product} relatedProducts={relatedProducts} initialComune={initialComune} />
+            <ProductClientView
+                product={product}
+                relatedProducts={relatedProducts}
+                initialComune={initialComune}
+                destinationHint="FT"
+            />
         </>
     );
 }

@@ -1,16 +1,25 @@
 import React from 'react';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/lib/products';
+import type { ProductCatalogContext } from '@/lib/productUrls';
 
 interface ProductGridProps {
     products: Product[];
     comuneSlug?: string;
     comuneName?: string;
+    /** Contesto catalogo (FT/FF) — piante duali restano sul path corretto. */
+    catalogContext?: ProductCatalogContext;
     /** Quattro colonne compatte (es. accessori Piccoli Amici). */
     layout?: 'default' | 'accessoryRow' | 'twoPerRow';
 }
 
-export default function ProductGrid({ products, comuneSlug, comuneName, layout = 'default' }: ProductGridProps) {
+export default function ProductGrid({
+    products,
+    comuneSlug,
+    comuneName,
+    catalogContext,
+    layout = 'default',
+}: ProductGridProps) {
     const isAccessoryRow = layout === 'accessoryRow';
     const isTwoPerRow = layout === 'twoPerRow';
     const useCompactCard = isAccessoryRow || isTwoPerRow;
@@ -32,6 +41,7 @@ export default function ProductGrid({ products, comuneSlug, comuneName, layout =
                         product={product}
                         comuneSlug={comuneSlug}
                         comuneName={comuneName}
+                        catalogContext={catalogContext}
                         compact={useCompactCard}
                     />
                 ))}

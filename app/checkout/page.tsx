@@ -12,9 +12,15 @@ import {
 import type { PartnerExternalOrderPayload } from '@/lib/partnerExternalOrderData';
 import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
+import OmaggioDestinationSelector from '@/components/OmaggioDestinationSelector';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName, toPersonTitleCase } from '@/lib/utils/formatPersonName';
+import {
+    isDualDestinationProduct,
+    inferOrderCategoryFromCart,
+    type FloremOrderDestination,
+} from '@/lib/floremDualDestination';
 
 interface OrderItem {
     productId: string;
@@ -22,6 +28,8 @@ interface OrderItem {
     priceCents: number;
     qty: number;
     slug?: string;
+    orderCategory?: string;
+    customData?: Record<string, unknown>;
 }
 
 interface AppliedDiscount {
@@ -77,6 +85,36 @@ export default function CheckoutPage() {
      */
     const showTombsMonthlySubscription = orderCategory === 'FT';
     const hasMidCheckoutStep = orderCategory === 'FT';
+    const cartHasDualPlant = cart.some((line) => {
+        const p = products.find((prod) => prod.id === line.productId);
+        return isDualDestinationProduct(p);
+    });
+
+    const applyDestinationToCart = (next: FloremOrderDestination) => {
+        setOrderCategory(next);
+        setCart((prev) => {
+            const updated = prev.map((line) => {
+                const p = products.find((prod) => prod.id === line.productId);
+                if (!isDualDestinationProduct(p)) return line;
+                return {
+                    ...line,
+                    orderCategory: next,
+                    customData: {
+                        ...(line.customData || {}),
+                        orderCategory: next,
+                        destination: next,
+                    },
+                };
+            });
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('fm_cart', JSON.stringify(updated));
+            }
+            return updated;
+        });
+        if (next === 'FT') {
+            setFuneralDirector('');
+        }
+    };
 
     const [buyerName, setBuyerName] = useState('');
     const [buyerSurname, setBuyerSurname] = useState('');
@@ -116,14 +154,11 @@ export default function CheckoutPage() {
                     localStorage.setItem('fm_cart', JSON.stringify(merged));
                 }
 
-                // Smart Category Inference
-                let inferredCategory: 'FT' | 'FF' | 'FA' | 'FP' = 'FT';
-                if (parsed.length > 0) {
-                    const firstItem = products.find(p => p.id === parsed[0].productId);
-                    if (firstItem?.category === 'funerale') inferredCategory = 'FF';
-                    else if (firstItem?.category === 'animali') inferredCategory = 'FA';
-                    setOrderCategory(inferredCategory);
-                }
+                // Smart Category Inference — piante duali usano destinazione salvata sul carrello
+                const inferredCategory = inferOrderCategoryFromCart(parsed, (id) =>
+                    products.find((p) => p.id === id)
+                );
+                setOrderCategory(inferredCategory);
 
                 const subStr = localStorage.getItem('fm_sub');
                 // Abbonamento mensile da preferenza home: solo se l’ordine è FT (tombe)
@@ -749,6 +784,14 @@ export default function CheckoutPage() {
                                 {/* SEZIONE CONSEGNA */}
                                 <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 space-y-2.5">
                                     <h3 className="font-display font-bold text-lg text-gray-900 border-b border-gray-200 pb-2">Sezione Consegna</h3>
+                                    {cartHasDualPlant && (orderCategory === 'FT' || orderCategory === 'FF') && (
+                                        <OmaggioDestinationSelector
+                                            value={orderCategory}
+                                            onChange={applyDestinationToCart}
+                                            idPrefix="checkout-dest"
+                                            className="pb-1"
+                                        />
+                                    )}
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="col-span-2 relative">
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">

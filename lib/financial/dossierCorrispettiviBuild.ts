@@ -14,6 +14,7 @@ import {
     type EuGatewayMatch,
 } from '@/lib/financial/euOrders2026Match';
 import { filterGatewayIncassiForCorrispettivi } from '@/lib/financial/corrispettiviSalesFilter';
+import { isStripePaypalPassthrough } from '@/lib/financial/gatewaySyncRows';
 
 /** Retrocompat: PRESUNTA/MANCANTE non più emessi (sempre DETERMINATA al 10%). */
 export type CorrispettivoVatCertainty = 'DETERMINATA' | 'PRESUNTA' | 'MANCANTE';
@@ -39,8 +40,11 @@ function isEuChannel(blob: string, paymentDate: Date): boolean {
     return /floremoria\.eu|stripe_eu|\.eu\b|psa|san\s*marco/i.test(blob);
 }
 
+/** Canale visualizzato nel registro / export commercialista. */
+export type CorrispettivoCanaleIncasso = 'Stripe' | 'PayPal' | 'PayPal (via Stripe)';
+
 type GatewayIncasso = {
-    gateway: 'Stripe' | 'PayPal';
+    gateway: CorrispettivoCanaleIncasso;
     transactionId: string;
     grossCents: number;
     paymentDate: Date;
@@ -103,8 +107,12 @@ async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso
             (typeof meta.customerEmail === 'string' && meta.customerEmail) ||
             (typeof meta.email === 'string' && meta.email) ||
             null;
+        // Checkout PayPal su rail Stripe: etichetta distinta (stesso portale PayPal per verifica)
+        const canale: CorrispettivoCanaleIncasso = isStripePaypalPassthrough(meta)
+            ? 'PayPal (via Stripe)'
+            : 'Stripe';
         out.push({
-            gateway: 'Stripe',
+            gateway: canale,
             transactionId: txId,
             grossCents: gross,
             paymentDate: r.createdAtStripe,
@@ -317,13 +325,17 @@ export async function buildGatewayCorrispettivi(params: {
     let euMatchByGwKey = new Map<string, EuGatewayMatch>();
     try {
         const euDs = loadEuOrders2026Dataset();
-        const probes = incassi.map((g) => ({
-            key: `${g.gateway}:${g.transactionId}`.toLowerCase(),
-            paymentDateIso: g.paymentDate.toISOString().slice(0, 10),
-            grossCents: g.grossCents,
-            payerName: g.payerName,
-            email: g.email,
-        }));
+        const probes = incassi.map((g) => {
+            // Chiave stabile per match .eu: rail tecnico (Stripe/PayPal), non etichetta display
+            const rail = g.gateway === 'PayPal' ? 'PayPal' : 'Stripe';
+            return {
+                key: `${rail}:${g.transactionId}`.toLowerCase(),
+                paymentDateIso: g.paymentDate.toISOString().slice(0, 10),
+                grossCents: g.grossCents,
+                payerName: g.payerName,
+                email: g.email,
+            };
+        });
         const matched = matchGatewaysToEuOrders(probes, euDs.orders, 3);
         euMatchByGwKey = new Map(matched.map((m) => [m.gatewayKey, m]));
     } catch (err) {
@@ -338,7 +350,8 @@ export async function buildGatewayCorrispettivi(params: {
         let orderNumber = order?.orderNumber || '';
         let orderId: string | null = order?.id ?? null;
         const date = g.paymentDate.toISOString().slice(0, 10);
-        const gwKey = `${g.gateway}:${g.transactionId}`.toLowerCase();
+        const rail = g.gateway === 'PayPal' ? 'PayPal' : 'Stripe';
+        const gwKey = `${rail}:${g.transactionId}`.toLowerCase();
         const euHit = euMatchByGwKey.get(gwKey);
 
         // Dataset .eu: identifica ordine se ancora orfano; lordo resta gateway (§8.2)
@@ -362,7 +375,7 @@ export async function buildGatewayCorrispettivi(params: {
                 dove: 'Corrispettivi',
                 importoCents: Math.abs(g.grossCents),
                 perche:
-                    'Incasso gateway senza collegamento ordine: scorporo al 10% comunque; riferimento ordine = DA_COLLEGARE in export commercialista.',
+                    `Incasso gateway senza collegamento ordine: scorporo al 10% comunque; in export commercialista il riferimento = id transazione ${g.transactionId}.`,
             });
         }
 

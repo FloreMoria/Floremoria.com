@@ -5,18 +5,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ProductHoverPreview from './ProductHoverPreview';
 import { Product } from '@/lib/products';
-import { getProductUrl } from '@/lib/productUrls';
+import { getProductUrl, type ProductCatalogContext } from '@/lib/productUrls';
 
 interface ProductCardProps {
     product: Product;
     comuneSlug?: string;
     comuneName?: string;
+    /** Contesto catalogo per URL piante duali (tomba vs funerale). */
+    catalogContext?: ProductCatalogContext;
     /** Card più basse e tipografia ridotta (es. accessori in riga da 4). */
     compact?: boolean;
 }
 
-export default function ProductCard({ product, comuneSlug, comuneName, compact = false }: ProductCardProps) {
-    const baseUrl = getProductUrl(product);
+export default function ProductCard({
+    product,
+    comuneSlug,
+    comuneName,
+    catalogContext,
+    compact = false,
+}: ProductCardProps) {
+    const baseUrl = getProductUrl(product, catalogContext);
     const productUrl = comuneSlug
         ? `${baseUrl}?loc=${comuneSlug}`
         : baseUrl;
@@ -111,7 +119,13 @@ export default function ProductCard({ product, comuneSlug, comuneName, compact =
                 </Link>
             </div>
 
-            {!compact && <ProductHoverPreview product={product} selectedImage={imgSrc} />}
+            {!compact && (
+                <ProductHoverPreview
+                    product={product}
+                    selectedImage={imgSrc}
+                    catalogContext={catalogContext}
+                />
+            )}
         </article>
     );
 }

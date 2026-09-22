@@ -1,7 +1,8 @@
 /**
  * Snapshot immutabile Registro Corrispettivi commercialista.
  * Perché: un totale fiscale che si ricalcola da solo non è difendibile in sede di controllo.
- * Download = lettura snapshot; ricalcolo live solo alla prima generazione o rettifica esplicita.
+ * Download = lettura snapshot (trimestre chiuso); ricalcolo live solo se trimestre in corso,
+ * prima generazione post-chiusura, o rettifica esplicita.
  */
 import { createHash } from 'crypto';
 import prisma from '@/lib/prisma';
@@ -34,6 +35,34 @@ export function periodToQuarterKey(period: CommercialistaPeriod): {
 } {
     if (period.kind === 'year') return { year: period.year, quarter: 0 };
     return { year: period.year, quarter: period.quarter };
+}
+
+/**
+ * Un trimestre è «chiuso» dal primo giorno del mese successivo alla fine del trimestre
+ * (T1→1 apr, T2→1 lug, T3→1 ott, T4→1 gen anno+1). Fino ad allora: solo live, niente freeze.
+ */
+export function isFiscalQuarterClosedForSnapshot(
+    year: number,
+    quarter: number,
+    now: Date = new Date()
+): boolean {
+    if (quarter === 0) {
+        return now >= new Date(year + 1, 0, 1, 0, 0, 0, 0);
+    }
+    if (quarter < 1 || quarter > 4) return false;
+    if (quarter === 4) {
+        return now >= new Date(year + 1, 0, 1, 0, 0, 0, 0);
+    }
+    return now >= new Date(year, quarter * 3, 1, 0, 0, 0, 0);
+}
+
+/** True se il periodo richiesto è ancora in corso (dati provvisori). */
+export function isCommercialistaPeriodOpen(
+    period: CommercialistaPeriod,
+    now: Date = new Date()
+): boolean {
+    const { year, quarter } = periodToQuarterKey(period);
+    return !isFiscalQuarterClosedForSnapshot(year, quarter, now);
 }
 
 /** Hash stabile sul contenuto F2 (non sull’orario di generazione). */
@@ -89,6 +118,7 @@ export async function listCorrispettiviSnapshots(year: number, quarter: number) 
 /**
  * Persiste un nuovo snapshot. Se alreadyExists e non è rettifica → no-op (restituisce attivo).
  * Rettifica: disattiva le versioni precedenti e crea versione+1 con motivo obbligatorio.
+ * Blocca il freeze se il trimestre è ancora in corso.
  */
 export async function freezeCorrispettiviSnapshot(input: {
     year: number;
@@ -104,16 +134,20 @@ export async function freezeCorrispettiviSnapshot(input: {
     snapshot: Awaited<ReturnType<typeof getActiveCorrispettiviSnapshot>>;
     created: boolean;
 }> {
+    if (!isFiscalQuarterClosedForSnapshot(input.year, input.quarter)) {
+        throw new Error(
+            `Impossibile congelare T${input.quarter || 'ANNO'} ${input.year}: trimestre ancora in corso. Congelamento automatico dal primo giorno successivo alla chiusura.`
+        );
+    }
+
     const contentHash = hashCorrispettiviRows(input.rows);
     const active = await getActiveCorrispettiviSnapshot(input.year, input.quarter);
 
     if (active && !input.rettificaMotivo) {
-        // Già congelato: non sovrascrivere
         return { snapshot: active, created: false };
     }
 
     if (input.rettificaMotivo && active && active.contentHash === contentHash) {
-        // Rettifica senza cambio numeri: rifiuta
         throw new Error(
             'Rettifica rifiutata: il contenuto coincide con lo snapshot attivo (nessuna differenza).'
         );

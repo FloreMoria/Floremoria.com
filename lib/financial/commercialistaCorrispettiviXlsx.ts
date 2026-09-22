@@ -20,6 +20,7 @@ import { VAT_PCT_FLORAL } from '@/lib/financial/vat';
 import {
     freezeCorrispettiviSnapshot,
     getActiveCorrispettiviSnapshot,
+    isCommercialistaPeriodOpen,
     periodToQuarterKey,
     type CorrispettiviSnapshotRow,
 } from '@/lib/financial/corrispettiviRegisterSnapshot';
@@ -452,7 +453,8 @@ function buildF1(
     wb: ExcelJS.Workbook,
     period: CommercialistaPeriod,
     totals: CommercialistaCorrispettiviTotals,
-    generatedAt: Date
+    generatedAt: Date,
+    opts?: { provisional?: boolean }
 ) {
     const ws = wb.addWorksheet('F1 — Riepilogo');
     ws.addRow(['Ragione sociale', FLOREMORIA_LEGAL_ENTITY.legalName]);
@@ -462,6 +464,14 @@ function buildF1(
         'Data e ora generazione',
         generatedAt.toLocaleString('it-IT', { timeZone: 'Europe/Rome' }),
     ]);
+    if (opts?.provisional) {
+        const dataIt = generatedAt.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
+        const noteRow = ws.addRow([
+            'Stato documento',
+            `Trimestre in corso — dati provvisori al ${dataIt}`,
+        ]);
+        noteRow.font = { bold: true, color: { argb: 'FF9A3412' }, name: 'Calibri', size: 11 };
+    }
     ws.addRow([]);
 
     const header = ws.addRow([
@@ -730,9 +740,10 @@ export type CommercialistaBuildOptions = {
 
 /**
  * Genera il workbook commercialista (F1 Riepilogo + F2 Registro).
- * Se esiste uno snapshot attivo per il periodo → restituisce quel file (niente ricalcolo).
- * Prima generazione: calcola, congela con hash, salva bytes.
- * Rettifica: solo con `rettificaMotivo` esplicito → nuova versione datata.
+ * Trimestre chiuso + snapshot attivo → file congelato (niente ricalcolo).
+ * Trimestre in corso → sempre live, con dicitura provvisoria in F1; niente freeze.
+ * Prima generazione post-chiusura → calcola e congela.
+ * Rettifica → solo con `rettificaMotivo` esplicito (trimestre chiuso).
  */
 export async function buildCommercialistaCorrispettiviXlsxOrdered(
     period: CommercialistaPeriod,
@@ -743,11 +754,14 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
     fromSnapshot: boolean;
     snapshotVersion: number | null;
     contentHash: string | null;
+    provisional: boolean;
 }> {
     const { year, quarter } = periodToQuarterKey(period);
+    const periodOpen = isCommercialistaPeriodOpen(period);
     const active = await getActiveCorrispettiviSnapshot(year, quarter);
 
-    if (active && !options.forceLive && !options.rettificaMotivo) {
+    // Snapshot solo se trimestre chiuso e non forceLive / non rettifica
+    if (active && !periodOpen && !options.forceLive && !options.rettificaMotivo) {
         const totals = {
             salesCount: active.rowCount,
             imponibileCents: active.imponibileCents,
@@ -760,6 +774,7 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
             fromSnapshot: true,
             snapshotVersion: active.version,
             contentHash: active.contentHash,
+            provisional: false,
             preview: {
                 filename: active.filename,
                 periodLabel: periodLabel(period),
@@ -775,10 +790,15 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
         };
     }
 
+    if (options.rettificaMotivo && periodOpen) {
+        throw new Error(
+            'Rettifica non ammessa su trimestre in corso: attendere la chiusura e il freeze, oppure usare forceLive solo in diagnostica.'
+        );
+    }
+
     const report = await loadReport(period);
     const dossierTotals = sumCorrispettiviFromReport(report);
 
-    // Pre-check dossier ↔ totali attesi
     const f2Probe = sumCorrispettiviFromReport(report);
     assertConsistencyWithDossier(f2Probe, report);
 
@@ -788,11 +808,10 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
     wb.modified = new Date();
 
     const generatedAt = new Date();
-    buildF1(wb, period, dossierTotals, generatedAt);
+    buildF1(wb, period, dossierTotals, generatedAt, { provisional: periodOpen });
     const { totals: f2Totals, probeRows } = buildF2(wb, report);
     assertConsistencyWithDossier(f2Totals, report);
     assertIndependentFileChecks(probeRows, dossierTotals, f2Totals);
-    // F3 non generato (sospeso) — vedi METODO / handoff commercialista
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
     const filename = commercialistaCorrispettiviFilename(period);
@@ -802,7 +821,8 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
     let contentHash: string | null = null;
     let fromSnapshot = false;
 
-    if (!options.forceLive) {
+    // Congela solo se trimestre chiuso e non forceLive
+    if (!options.forceLive && !periodOpen) {
         const frozen = await freezeCorrispettiviSnapshot({
             year,
             quarter,
@@ -818,12 +838,12 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
         contentHash = frozen.snapshot?.contentHash ?? null;
         fromSnapshot = Boolean(frozen.snapshot);
         if (frozen.snapshot && !frozen.created) {
-            // Race: snapshot già presente → usa bytes congelati
             return {
                 buffer: Buffer.from(frozen.snapshot.xlsxBytes),
                 fromSnapshot: true,
                 snapshotVersion: frozen.snapshot.version,
                 contentHash: frozen.snapshot.contentHash,
+                provisional: false,
                 preview: {
                     filename: frozen.snapshot.filename,
                     periodLabel: periodLabel(period),
@@ -851,6 +871,7 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
         fromSnapshot,
         snapshotVersion,
         contentHash,
+        provisional: periodOpen,
         preview: {
             filename,
             periodLabel: periodLabel(period),

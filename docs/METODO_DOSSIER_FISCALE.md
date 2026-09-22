@@ -720,14 +720,17 @@ Regole:
 **Regola.** Il registro corrispettivi di un trimestre, una volta generato il documento
 commercialista (F1+F2), **si congela**. Il numero non cambia più da solo.
 
-- Alla **prima** generazione del file per `(anno, trimestre)` il sistema salva uno
+- Alla **prima** generazione del file per `(anno, trimestre)` **dopo la chiusura** del
+  trimestre (T1→1 apr, T2→1 lug, T3→1 ott, T4→1 gen) il sistema salva uno
   **snapshot immutabile**: data/ora di freeze, hash SHA-256 del contenuto F2, file Excel
   originale, totali (lordo / imponibile / IVA / n° righe).
 - I download successivi del pulsante commercialista **rigenerano dallo snapshot**: non
   ricalcolano da gateway, ordini o ledger.
-- Se emerge una correzione, si registra come **rettifica esplicita e datata**, con
-  **motivo obbligatorio**. La rettifica crea una **nuova versione**; il documento
-  originale (versione precedente) resta consultabile. Non si sovrascrive.
+- **Trimestre in corso:** niente freeze. Il file si genera sempre dal vivo e in F1 riporta
+  la dicitura «Trimestre in corso — dati provvisori al [data]».
+- Se emerge una correzione su un trimestre già congelato, si registra come **rettifica
+  esplicita e datata**, con **motivo obbligatorio**. La rettifica crea una **nuova
+  versione**; il documento originale resta consultabile. Non si sovrascrive.
 - Un totale fiscale che si muove da solo **non è una fonte autorevole**: non è
   difendibile davanti a un controllo.
 - Il ricalcolo live (`forceLive`) è ammesso **solo** in diagnostica e **non** sostituisce

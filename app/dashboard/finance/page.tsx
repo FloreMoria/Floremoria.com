@@ -52,7 +52,7 @@ import { FLOREMORIA_FINECO_BANK, FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { useDashboardLive } from '@/hooks/useDashboardLive';
 
-type FinanceTab = 'bank' | 'riconcilia' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
+type FinanceTab = FinanceMainTabId;
 
 type FinanceLedgerPayload = {
     ok?: boolean;
@@ -85,7 +85,7 @@ function formatEuroCents(cents: number | null | undefined): string {
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
-    const [activeTab, setActiveTab] = useState<FinanceTab>('bank');
+    const [activeTab, setActiveTab] = useState<FinanceTab>('fisco');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [quadratura, setQuadratura] = useState<FinanceQuadratura | null>(null);
@@ -585,12 +585,6 @@ export default function FinanceDashboardPage() {
                         <RefreshCw size={16} className={syncingAll ? 'animate-spin text-[#c5a880]' : ''} />
                         {syncingAll ? 'Sincronizzazione...' : 'Sincronizza'}
                     </button>
-                    <Link
-                        href="/dashboard/fornitori"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors text-sm font-semibold"
-                    >
-                        Gestione Fornitori
-                    </Link>
                 </div>
             </div>
 
@@ -620,255 +614,6 @@ export default function FinanceDashboardPage() {
                 </div>
             )}
 
-            {/* Controlli C1–C12 — sempre in cima (METODO §5) */}
-            <DossierControlsBadge />
-
-            {/* Lista di lavoro (non un controllo): fatture fiorista da sollecitare */}
-            <FloristInvoiceWorkListPanel />
-
-            {/* Riquadro Fineco + dati societari */}
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div className="min-w-0 space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Fineco e IBAN · Dati societari
-                        </p>
-                        <h3 className="text-base font-display font-bold text-slate-900">
-                            {FLOREMORIA_LEGAL_ENTITY.legalName}
-                        </h3>
-                        <p className="text-sm text-slate-600">
-                            Sede legale: {FLOREMORIA_LEGAL_ENTITY.registeredOffice}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                            P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber} · REA{' '}
-                            {FLOREMORIA_LEGAL_ENTITY.reaNumber} · Capitale sociale:{' '}
-                            {FLOREMORIA_LEGAL_ENTITY.shareCapital ?? 'Dato non disponibile'}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                            Codice SDI:{' '}
-                            <span className="font-mono font-semibold text-slate-800">
-                                {FLOREMORIA_LEGAL_ENTITY.sdiCode}
-                            </span>
-                        </p>
-                    </div>
-                    <div className="shrink-0 w-full sm:w-auto font-mono text-sm space-y-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 sm:min-w-[260px]">
-                        <div>
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                                Istituto
-                            </span>
-                            <div className="font-semibold text-slate-900 font-sans">
-                                {FLOREMORIA_FINECO_BANK.institute}
-                            </div>
-                        </div>
-                        <div>
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                                IBAN
-                            </span>
-                            <div className="font-semibold text-slate-900 tracking-wide">
-                                {FLOREMORIA_FINECO_BANK.ibanDisplay}
-                            </div>
-                        </div>
-                        <div>
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                                BIC / SWIFT
-                            </span>
-                            <div className="text-slate-800">
-                                {FLOREMORIA_FINECO_BANK.bicSepa}{' '}
-                                <span className="text-slate-400">(SEPA)</span> ·{' '}
-                                {FLOREMORIA_FINECO_BANK.bicSwift}{' '}
-                                <span className="text-slate-400">(SWIFT)</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                    {editingBalance ? (
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-500">Saldo Fineco</span>
-                            <input
-                                autoFocus
-                                value={balanceDraft}
-                                onChange={(e) => setBalanceDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') void saveManualBalance();
-                                    if (e.key === 'Escape') setEditingBalance(false);
-                                }}
-                                className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm font-mono"
-                            />
-                            <button
-                                type="button"
-                                disabled={savingBalance}
-                                onClick={() => void saveManualBalance()}
-                                className="p-1.5 rounded-lg bg-emerald-600 text-white disabled:opacity-50"
-                                title="Salva"
-                            >
-                                <Check size={14} />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setBalanceDraft(stats.balance);
-                                setEditingBalance(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-sm font-mono font-semibold text-slate-800 hover:bg-slate-50 rounded-lg px-2 py-1 border border-slate-100"
-                            title="Modifica saldo Fineco"
-                        >
-                            {formatEuroCents(manualBalanceCents)}
-                            <Pencil size={12} className="text-slate-400" />
-                        </button>
-                    )}
-                    <button
-                        type="button"
-                        onClick={() => void copyFinecoIban()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                    >
-                        <Copy size={13} />
-                        {ibanCopied ? 'IBAN copiato!' : 'Copia IBAN'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => void copyFinecoBic()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                    >
-                        <Copy size={13} />
-                        {bicCopied ? 'BIC copiato!' : 'Copia BIC/SWIFT'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Fascia di quadratura — 3 controlli + 17900 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Differenza Saldo Banca
-                    </span>
-                    {quadratura?.isBalanceSquared ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
-                            <CheckCircle2 size={16} />
-                            0,00 € Quadrato
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                                className={`text-xl font-bold font-mono ${
-                                    (quadratura?.balanceDiffCents ?? 0) === 0
-                                        ? 'text-slate-900'
-                                        : 'text-amber-700'
-                                }`}
-                            >
-                                {formatEuroCents(quadratura?.balanceDiffCents ?? null)}
-                            </span>
-                            {!editingBalance && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setBalanceDraft(stats.balance);
-                                        setEditingBalance(true);
-                                    }}
-                                    className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
-                                    title="Allinea saldo manuale"
-                                >
-                                    <Pencil size={14} />
-                                </button>
-                            )}
-                        </div>
-                    )}
-                    <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
-                        Reale {formatEuroCents(quadratura?.realBalanceCents ?? manualBalanceCents)} · Libro{' '}
-                        {formatEuroCents(quadratura?.calculatedBalanceCents ?? null)}
-                        {quadratura?.openingBalanceCents != null ? (
-                            <>
-                                <br />
-                                Apertura {formatEuroCents(quadratura.openingBalanceCents)}
-                                {quadratura.statementClosingCents != null
-                                    ? ` · Ultima chiusura ${formatEuroCents(quadratura.statementClosingCents)}`
-                                    : ''}
-                            </>
-                        ) : null}
-                    </p>
-                    {quadratura?.realBalanceAlignedAt || manualBalanceAlignedAt ? (
-                        <p className="text-[10px] text-slate-400">
-                            Reale allineato{' '}
-                            {new Date(
-                                quadratura?.realBalanceAlignedAt || manualBalanceAlignedAt || ''
-                            ).toLocaleString('it-IT')}
-                        </p>
-                    ) : null}
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => setActiveTab('bank')}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left hover:border-[#c5a880] hover:ring-2 hover:ring-[#c5a880]/20 transition-all"
-                >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <Link2 size={12} />
-                        Movimenti da Riconciliare
-                    </span>
-                    <p className="mt-1 text-2xl font-bold font-mono text-slate-900">
-                        {quadratura?.unmatchedTotal ?? '—'}
-                    </p>
-                    <span className="text-[10px] text-[#c5a880] font-semibold">Apri tab Banca →</span>
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => setActiveTab('passivo')}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left hover:border-[#c5a880] hover:ring-2 hover:ring-[#c5a880]/20 transition-all"
-                >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <FileWarning size={12} />
-                        Documenti Mancanti
-                    </span>
-                    <p className="mt-1 text-2xl font-bold font-mono text-slate-900">
-                        {quadratura?.missingDocuments ?? '—'}
-                    </p>
-                    <span className="text-[10px] text-[#c5a880] font-semibold">Apri tab Passivo →</span>
-                </button>
-
-                <div
-                    className={`rounded-2xl border p-4 shadow-sm space-y-2 ${
-                        (quadratura?.daClassificareCents ?? 0) !== 0
-                            ? 'border-amber-300 bg-amber-50/80'
-                            : 'border-slate-200 bg-white'
-                    }`}
-                >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <AlertOctagon size={12} />
-                        17900 Da classificare
-                    </span>
-                    {(quadratura?.daClassificareCents ?? 0) !== 0 ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-sm font-bold">
-                            <AlertOctagon size={16} />
-                            {formatEuroCents(quadratura?.daClassificareCents ?? 0)}
-                        </div>
-                    ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
-                            <CheckCircle2 size={16} />
-                            0,00 €
-                        </div>
-                    )}
-                    <p className="text-[10px] text-slate-500 leading-relaxed">
-                        {quadratura?.daClassificareAccount || '17900 - Partite da classificare'}
-                        {(quadratura?.daClassificareCents ?? 0) !== 0
-                            ? ' — partite aperte senza payout id'
-                            : ' — saldo azzerato'}
-                    </p>
-                    {(quadratura?.quarantineDocumentCount ?? 0) > 0 ? (
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('passivo')}
-                            className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold hover:bg-rose-100 transition-colors"
-                        >
-                            <FileWarning size={14} />
-                            Quarantena: {quadratura?.quarantineDocumentCount} documenti da verificare
-                        </button>
-                    ) : null}
-                </div>
-            </div>
-
             <SaasForeignExpensesPanel
                 open={saasDrawerOpen}
                 onClose={() => setSaasDrawerOpen(false)}
@@ -889,19 +634,17 @@ export default function FinanceDashboardPage() {
                 <div className="flex flex-wrap border-b border-slate-200 bg-slate-50/50">
                     {(
                         [
-                            ['bank', 'Banca Fineco'],
-                            ['riconcilia', 'Da riconciliare'],
-                            ['prima-nota', 'Prima Nota'],
-                            ['passivo', 'Passivo / Documenti'],
-                            ['gateway', 'Gateway (4 canali)'],
-                            ['fisco', 'Fisco & Scadenze'],
+                            ['fisco', 'Fisco'],
+                            ['gestione', 'Gestione'],
+                            ['controlli', 'Controlli'],
+                            ['avanzate', 'Avanzate'],
                         ] as const
                     ).map(([id, label]) => {
                         const tabId = id as FinanceMainTabId;
                         const styles = FINANCE_TAB_STYLES[tabId];
                         const isActive = activeTab === id;
                         const badge =
-                            id === 'riconcilia' && pendingReconcileCount != null
+                            id === 'controlli' && pendingReconcileCount != null
                                 ? pendingReconcileCount
                                 : null;
                         return (
@@ -928,75 +671,10 @@ export default function FinanceDashboardPage() {
                     })}
                 </div>
 
-                {activeTab === 'bank' && (
-                    <div className="p-4 space-y-4">
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('riconcilia')}
-                                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-xs font-bold hover:bg-amber-100"
-                            >
-                                Da riconciliare
-                                {pendingReconcileCount != null ? (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-200 text-[10px]">
-                                        {pendingReconcileCount}
-                                    </span>
-                                ) : null}
-                            </button>
-                        </div>
-                        <BankStatementsPanel variant="tab1" />
-                        <div className="border-t border-slate-100 pt-4 space-y-3">
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                                <h4 className="text-sm font-bold text-slate-800">
-                                    Movimenti estratto conto
-                                </h4>
-                                <input
-                                    type="text"
-                                    placeholder="Cerca causale, beneficiario, importo…"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
-                                />
-                            </div>
-                            <BankMovementsStatementTable searchTerm={searchTerm} />
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === 'riconcilia' && (
-                    <ManualReconciliationPanel onCountChange={setPendingReconcileCount} />
-                )}
-
-                {activeTab === 'prima-nota' && (
-                    <div>
-                        <div className="p-4 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-3">
-                            <input
-                                type="text"
-                                placeholder="Cerca per descrizione, conto o riferimenti…"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
-                            />
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    disabled={exportingLedger}
-                                    onClick={() => void handleExportHistoricalJSON()}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
-                                >
-                                    <FileJson size={16} />
-                                    Esporta JSON
-                                </button>
-                            </div>
-                        </div>
-                        <PrimaNotaTable
-                            localEntries={ledger?.accountingEntries || []}
-                            searchTerm={searchTerm}
-                        />
-                    </div>
-                )}
-
-                {activeTab === 'passivo' && (
+                {activeTab === 'fisco' && (
+                    <div className="p-4 md:p-6 space-y-8 bg-white">
+                        <TaxQuarterlyPanel variant="fisco" />
                     <div className="p-4 space-y-4">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
                             <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
@@ -1029,9 +707,258 @@ export default function FinanceDashboardPage() {
                             }}
                         />
                     </div>
+
+                        {/* Scadenziario — spostato qui da fondo pagina */}
+                        <div className="space-y-6">
+                            <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+                                <div>
+                                    <h3 className="text-xl font-display font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                        <Calendar className="text-[#c5a880]" size={22} />
+                                        Scadenziario &amp; Adempimenti S.r.l. (Startup Innovativa)
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Tracciamento automatico e allerta prioritaria 10 giorni prima di ogni adempimento fiscale e societario.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start lg:self-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setComplianceFilter('ALL')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        Tutti ({allDeadlines.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setComplianceFilter('FISC')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'FISC' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        Fiscale
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setComplianceFilter('ESTER')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ESTER' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        Esterometro
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setComplianceFilter('CORP')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'CORP' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        Bilancio &amp; Startup
+                                    </button>
+                                </div>
+                            </div>
+
+                            {urgentDeadlines.length > 0 && (
+                                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                    <div className="flex items-start gap-3">
+                                        <AlertOctagon className="text-rose-600 shrink-0 mt-0.5 animate-pulse" size={20} />
+                                        <div>
+                                            <span className="font-bold text-rose-800 text-sm">
+                                                Attenzione: {urgentDeadlines.length} {urgentDeadlines.length === 1 ? 'scadenza urgente' : 'scadenze urgenti'}!
+                                            </span>
+                                            <p className="text-xs text-rose-700 leading-normal mt-0.5" suppressHydrationWarning>
+                                                Prossima scadenza: <strong>{urgentDeadlines[0].title}</strong> {urgentDeadlines[0].daysRemaining < 0 ? 'scaduta il' : 'in scadenza il'} {formatDate(urgentDeadlines[0].dueDate)} ({urgentDeadlines[0].daysRemaining < 0 ? 'scaduta da' : 'mancano'} {Math.abs(urgentDeadlines[0].daysRemaining)} giorni).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="dashboard-table-scroll overflow-x-auto rounded-2xl border border-slate-100">
+                                <table className="w-full text-left border-collapse min-w-[800px]">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                            <th className="px-5 py-3">Adempimento</th>
+                                            <th className="px-5 py-3">Categoria</th>
+                                            <th className="px-5 py-3">Frequenza</th>
+                                            <th className="px-5 py-3">Descrizione</th>
+                                            <th className="px-5 py-3">Data Scadenza</th>
+                                            <th className="px-5 py-3">Tempo Rimanente</th>
+                                            <th className="px-5 py-3 text-right">Stato</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-sm">
+                                        {filteredDeadlines.map((item) => {
+                                            const isCompleted = item.status === 'COMPLETED';
+                                            const isUrgent = item.status === 'URGENT';
+
+                                            return (
+                                                <tr
+                                                    key={item.id}
+                                                    className={`hover:bg-slate-50/50 transition-colors ${isUrgent ? 'bg-rose-50/10 hover:bg-rose-50/20' : ''} ${isCompleted ? 'opacity-65' : ''}`}
+                                                >
+                                                    <td className="px-5 py-3.5 font-bold text-slate-900 max-w-[200px] truncate" title={item.title}>
+                                                        {item.title}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                                                            item.category === 'IVA' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                                            item.category === 'F24' ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                                                            item.category === 'CONTABILITA' ? 'bg-teal-50 border-teal-200 text-teal-700' :
+                                                            item.category === 'ESTEROMETRO' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                                            item.category === 'BILANCIO' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                                            item.category === 'STARTUP_INNOVATIVA' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                                            'bg-purple-50 border-purple-200 text-purple-700'
+                                                        }`}>
+                                                            {item.category === 'CONTABILITA' ? 'CONTABILITÀ' : item.category}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-xs text-slate-500 font-bold uppercase">{item.frequency}</td>
+                                                    <td className="px-5 py-3.5 text-xs text-slate-600 max-w-[280px] truncate" title={item.description}>
+                                                        {item.description}
+                                                        {item.externalRef ? (
+                                                            <>
+                                                                {' '}
+                                                                <a
+                                                                    href={item.externalRef}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-teal-700 underline font-semibold"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    Apri YouDoox
+                                                                </a>
+                                                            </>
+                                                        ) : null}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-xs font-mono font-semibold text-slate-700" suppressHydrationWarning>
+                                                        {formatDate(item.dueDate)}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-xs font-semibold">
+                                                        {isCompleted ? (
+                                                            <span className="text-slate-400 font-normal">—</span>
+                                                        ) : item.daysRemaining < 0 ? (
+                                                            <span className="text-rose-600 font-bold uppercase">Scaduto ({Math.abs(item.daysRemaining)} g fa)</span>
+                                                        ) : item.daysRemaining === 0 ? (
+                                                            <span className="text-rose-600 font-bold uppercase">Oggi!</span>
+                                                        ) : (
+                                                            <span className={item.daysRemaining <= 10 ? 'text-rose-600 font-bold' : 'text-slate-700'}>
+                                                                {item.daysRemaining} {item.daysRemaining === 1 ? 'giorno' : 'giorni'}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-right">
+                                                        <select
+                                                            value={item.uiStatus}
+                                                            onChange={(e) =>
+                                                                void handleSetDeadlineStatus(
+                                                                    item.id,
+                                                                    e.target.value as
+                                                                        | 'PENDING'
+                                                                        | 'DUE_SOON'
+                                                                        | 'PAID'
+                                                                        | 'ARCHIVED'
+                                                                        | 'SCADUTO'
+                                                                )
+                                                            }
+                                                            className={`inline-flex px-2 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border cursor-pointer ${
+                                                                item.uiStatus === 'PAID'
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                    : item.uiStatus === 'DUE_SOON' ||
+                                                                        item.uiStatus === 'SCADUTO'
+                                                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                      : item.uiStatus === 'ARCHIVED'
+                                                                        ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                                                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                                                            }`}
+                                                        >
+                                                            <option value="SCADUTO">Scaduto</option>
+                                                            <option value="DUE_SOON">In scadenza</option>
+                                                            <option value="PAID">Pagato</option>
+                                                            <option value="PENDING">Da completare</option>
+                                                            <option value="ARCHIVED">Archiviato</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+
+                        <details className="group rounded-2xl border border-slate-100 overflow-hidden">
+                            <summary className="cursor-pointer list-none px-5 py-4 bg-slate-50 text-sm font-bold text-slate-800 hover:bg-slate-100">
+                                Archivio Storico Fiscale
+                            </summary>
+                            <div className="border-t border-slate-100">
+                                <HistoricalFiscalArchivePanel />
+                            </div>
+                        </details>
+
+                    </div>
                 )}
 
-                {activeTab === 'gateway' && (
+                {activeTab === 'gestione' && (
+                    <div className="space-y-6">
+                    <div className="p-4 space-y-4">
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('gestione')}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-xs font-bold hover:bg-amber-100"
+                            >
+                                Da riconciliare
+                                {pendingReconcileCount != null ? (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-200 text-[10px]">
+                                        {pendingReconcileCount}
+                                    </span>
+                                ) : null}
+                            </button>
+                        </div>
+                        <BankStatementsPanel variant="tab1" />
+                        <div className="border-t border-slate-100 pt-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <h4 className="text-sm font-bold text-slate-800">
+                                    Movimenti estratto conto
+                                </h4>
+                                <input
+                                    type="text"
+                                    placeholder="Cerca causale, beneficiario, importo…"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
+                                />
+                            </div>
+                            <BankMovementsStatementTable searchTerm={searchTerm} />
+                        </div>
+                    </div>
+
+                    <ManualReconciliationPanel onCountChange={setPendingReconcileCount} />
+
+                    <div>
+                        <div className="p-4 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-3">
+                            <input
+                                type="text"
+                                placeholder="Cerca per descrizione, conto o riferimenti…"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={exportingLedger}
+                                    onClick={() => void handleExportHistoricalJSON()}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
+                                >
+                                    <FileJson size={16} />
+                                    Esporta JSON
+                                </button>
+                            </div>
+                        </div>
+                        <PrimaNotaTable
+                            localEntries={ledger?.accountingEntries || []}
+                            searchTerm={searchTerm}
+                        />
+                    </div>
+
                     <div className="p-6 space-y-8 bg-white">
                         {loadingGateways || !gatewayData ? (
                             <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
@@ -1229,274 +1156,12 @@ export default function FinanceDashboardPage() {
 
                                     <GatewaySyncTable refreshToken={gatewayTableRefresh} />
                                 </div>
-
-                                <details className="group border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                                    <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-5 py-4 bg-slate-50 hover:bg-slate-100">
-                                        <span className="text-lg font-bold text-slate-900">
-                                            Log grezzi checkout Stripe
-                                        </span>
-                                        <span className="text-[11px] font-semibold text-slate-500 group-open:hidden">
-                                            Espandi
-                                        </span>
-                                    </summary>
-                                    <div className="px-5 pt-2 pb-0 flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => void loadGateways()}
-                                            className="text-xs text-[#c5a880] hover:text-[#b0936b] font-bold flex items-center gap-1"
-                                        >
-                                            <RefreshCw size={12} />
-                                            Aggiorna logs
-                                        </button>
-                                    </div>
-                                    <div className="dashboard-table-scroll overflow-x-auto border-t border-slate-100 p-5">
-                                        <table className="w-full text-left border-collapse min-w-[800px]">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                    <th className="px-5 py-3">Orario</th>
-                                                    <th className="px-5 py-3">Rif Ordine</th>
-                                                    <th className="px-5 py-3">Cliente</th>
-                                                    <th className="px-5 py-3 text-right">Importo</th>
-                                                    <th className="px-5 py-3">Esito Pagamento</th>
-                                                    <th className="px-5 py-3">Stato Sessione</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100 text-sm">
-                                                {gatewayData.stripe.transactions.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic">Nessuna sessione Stripe recente trovata.</td>
-                                                    </tr>
-                                                ) : (
-                                                    gatewayData.stripe.transactions.map((tx: any) => {
-                                                        const isSuccess = tx.paymentStatus === 'paid';
-                                                        return (
-                                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className="px-5 py-3.5 text-xs text-slate-500">
-                                                                    {formatDateTime(tx.createdAt)}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">
-                                                                    {tx.orderNumber}
-                                                                </td>
-                                                                <td className="px-5 py-3.5">
-                                                                    <div className="font-semibold text-slate-800">{tx.customerName}</div>
-                                                                    <div className="text-[10px] text-slate-400">{tx.customerEmail}</div>
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-right font-mono font-semibold">
-                                                                    €{(tx.amountCents / 100).toFixed(2)}
-                                                                </td>
-                                                                <td className="px-5 py-3.5">
-                                                                    {isSuccess ? (
-                                                                        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 uppercase">
-                                                                            Successo
-                                                                        </span>
-                                                                    ) : (
-                                                                        <div className="space-y-1">
-                                                                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 border border-rose-200 text-rose-700 uppercase">
-                                                                                Fallito / Rifiutato
-                                                                            </span>
-                                                                            {tx.errorMessage && (
-                                                                                <p className="text-[10px] text-rose-500 max-w-[200px] leading-tight">{tx.errorMessage}</p>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-xs font-medium text-slate-500 uppercase">
-                                                                    {tx.status}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </details>
                             </div>
                         )}
                     </div>
-                )}
 
-                {activeTab === 'fisco' && (
-                    <div className="p-4 md:p-6 space-y-8 bg-white">
-                        {/* Scadenziario — spostato qui da fondo pagina */}
-                        <div className="space-y-6">
-                            <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
-                                <div>
-                                    <h3 className="text-xl font-display font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                        <Calendar className="text-[#c5a880]" size={22} />
-                                        Scadenziario &amp; Adempimenti S.r.l. (Startup Innovativa)
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        Tracciamento automatico e allerta prioritaria 10 giorni prima di ogni adempimento fiscale e societario.
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start lg:self-center">
-                                    <button
-                                        type="button"
-                                        onClick={() => setComplianceFilter('ALL')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                    >
-                                        Tutti ({allDeadlines.length})
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setComplianceFilter('FISC')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'FISC' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                    >
-                                        Fiscale
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setComplianceFilter('ESTER')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ESTER' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                    >
-                                        Esterometro
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setComplianceFilter('CORP')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'CORP' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                    >
-                                        Bilancio &amp; Startup
-                                    </button>
-                                </div>
-                            </div>
-
-                            {urgentDeadlines.length > 0 && (
-                                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                                    <div className="flex items-start gap-3">
-                                        <AlertOctagon className="text-rose-600 shrink-0 mt-0.5 animate-pulse" size={20} />
-                                        <div>
-                                            <span className="font-bold text-rose-800 text-sm">
-                                                Attenzione: {urgentDeadlines.length} {urgentDeadlines.length === 1 ? 'scadenza urgente' : 'scadenze urgenti'}!
-                                            </span>
-                                            <p className="text-xs text-rose-700 leading-normal mt-0.5" suppressHydrationWarning>
-                                                Prossima scadenza: <strong>{urgentDeadlines[0].title}</strong> {urgentDeadlines[0].daysRemaining < 0 ? 'scaduta il' : 'in scadenza il'} {formatDate(urgentDeadlines[0].dueDate)} ({urgentDeadlines[0].daysRemaining < 0 ? 'scaduta da' : 'mancano'} {Math.abs(urgentDeadlines[0].daysRemaining)} giorni).
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="dashboard-table-scroll overflow-x-auto rounded-2xl border border-slate-100">
-                                <table className="w-full text-left border-collapse min-w-[800px]">
-                                    <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                            <th className="px-5 py-3">Adempimento</th>
-                                            <th className="px-5 py-3">Categoria</th>
-                                            <th className="px-5 py-3">Frequenza</th>
-                                            <th className="px-5 py-3">Descrizione</th>
-                                            <th className="px-5 py-3">Data Scadenza</th>
-                                            <th className="px-5 py-3">Tempo Rimanente</th>
-                                            <th className="px-5 py-3 text-right">Stato</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 text-sm">
-                                        {filteredDeadlines.map((item) => {
-                                            const isCompleted = item.status === 'COMPLETED';
-                                            const isUrgent = item.status === 'URGENT';
-
-                                            return (
-                                                <tr
-                                                    key={item.id}
-                                                    className={`hover:bg-slate-50/50 transition-colors ${isUrgent ? 'bg-rose-50/10 hover:bg-rose-50/20' : ''} ${isCompleted ? 'opacity-65' : ''}`}
-                                                >
-                                                    <td className="px-5 py-3.5 font-bold text-slate-900 max-w-[200px] truncate" title={item.title}>
-                                                        {item.title}
-                                                    </td>
-                                                    <td className="px-5 py-3.5">
-                                                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
-                                                            item.category === 'IVA' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                                            item.category === 'F24' ? 'bg-slate-50 border-slate-200 text-slate-700' :
-                                                            item.category === 'CONTABILITA' ? 'bg-teal-50 border-teal-200 text-teal-700' :
-                                                            item.category === 'ESTEROMETRO' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                                                            item.category === 'BILANCIO' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
-                                                            item.category === 'STARTUP_INNOVATIVA' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                                                            'bg-purple-50 border-purple-200 text-purple-700'
-                                                        }`}>
-                                                            {item.category === 'CONTABILITA' ? 'CONTABILITÀ' : item.category}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-xs text-slate-500 font-bold uppercase">{item.frequency}</td>
-                                                    <td className="px-5 py-3.5 text-xs text-slate-600 max-w-[280px] truncate" title={item.description}>
-                                                        {item.description}
-                                                        {item.externalRef ? (
-                                                            <>
-                                                                {' '}
-                                                                <a
-                                                                    href={item.externalRef}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-teal-700 underline font-semibold"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    Apri YouDoox
-                                                                </a>
-                                                            </>
-                                                        ) : null}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-xs font-mono font-semibold text-slate-700" suppressHydrationWarning>
-                                                        {formatDate(item.dueDate)}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-xs font-semibold">
-                                                        {isCompleted ? (
-                                                            <span className="text-slate-400 font-normal">—</span>
-                                                        ) : item.daysRemaining < 0 ? (
-                                                            <span className="text-rose-600 font-bold uppercase">Scaduto ({Math.abs(item.daysRemaining)} g fa)</span>
-                                                        ) : item.daysRemaining === 0 ? (
-                                                            <span className="text-rose-600 font-bold uppercase">Oggi!</span>
-                                                        ) : (
-                                                            <span className={item.daysRemaining <= 10 ? 'text-rose-600 font-bold' : 'text-slate-700'}>
-                                                                {item.daysRemaining} {item.daysRemaining === 1 ? 'giorno' : 'giorni'}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-right">
-                                                        <select
-                                                            value={item.uiStatus}
-                                                            onChange={(e) =>
-                                                                void handleSetDeadlineStatus(
-                                                                    item.id,
-                                                                    e.target.value as
-                                                                        | 'PENDING'
-                                                                        | 'DUE_SOON'
-                                                                        | 'PAID'
-                                                                        | 'ARCHIVED'
-                                                                        | 'SCADUTO'
-                                                                )
-                                                            }
-                                                            className={`inline-flex px-2 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border cursor-pointer ${
-                                                                item.uiStatus === 'PAID'
-                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                                    : item.uiStatus === 'DUE_SOON' ||
-                                                                        item.uiStatus === 'SCADUTO'
-                                                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                                      : item.uiStatus === 'ARCHIVED'
-                                                                        ? 'bg-slate-100 text-slate-500 border-slate-200'
-                                                                        : 'bg-amber-50 text-amber-800 border-amber-200'
-                                                            }`}
-                                                        >
-                                                            <option value="SCADUTO">Scaduto</option>
-                                                            <option value="DUE_SOON">In scadenza</option>
-                                                            <option value="PAID">Pagato</option>
-                                                            <option value="PENDING">Da completare</option>
-                                                            <option value="ARCHIVED">Archiviato</option>
-                                                        </select>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <PaymentOrderWorkListPanel />
-
-                        <TaxQuarterlyPanel />
-
-                        {/* CE / SP / IRES (ex tab Bilancio) */}
+                                
+{/* CE / SP / IRES (ex tab Bilancio) */}
                         <div className="space-y-8">
                             {statements?.contoEconomico?.source === 'historical_ledger' && (
                                 <div className="rounded-2xl border border-teal-100 bg-teal-50/60 px-4 py-3 text-xs text-teal-900">
@@ -1660,14 +1325,379 @@ export default function FinanceDashboardPage() {
                             )}
                         </div>
 
-                        <details className="group rounded-2xl border border-slate-100 overflow-hidden">
-                            <summary className="cursor-pointer list-none px-5 py-4 bg-slate-50 text-sm font-bold text-slate-800 hover:bg-slate-100">
-                                Archivio Storico Fiscale
+                        
+                    </div>
+                )}
+
+                {activeTab === 'controlli' && (
+                    <div className="p-4 md:p-6 space-y-6 bg-white">
+<DossierControlsBadge />
+
+            {/* Lista di lavoro (non un controllo): fatture fiorista da sollecitare */}
+            
+<FloristInvoiceWorkListPanel />
+
+            
+                        <PaymentOrderWorkListPanel />
+
+{/* Fascia di quadratura — 3 controlli + 17900 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Differenza Saldo Banca
+                    </span>
+                    {quadratura?.isBalanceSquared ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
+                            <CheckCircle2 size={16} />
+                            0,00 € Quadrato
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                                className={`text-xl font-bold font-mono ${
+                                    (quadratura?.balanceDiffCents ?? 0) === 0
+                                        ? 'text-slate-900'
+                                        : 'text-amber-700'
+                                }`}
+                            >
+                                {formatEuroCents(quadratura?.balanceDiffCents ?? null)}
+                            </span>
+                            {!editingBalance && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBalanceDraft(stats.balance);
+                                        setEditingBalance(true);
+                                    }}
+                                    className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                    title="Allinea saldo manuale"
+                                >
+                                    <Pencil size={14} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
+                        Reale {formatEuroCents(quadratura?.realBalanceCents ?? manualBalanceCents)} · Libro{' '}
+                        {formatEuroCents(quadratura?.calculatedBalanceCents ?? null)}
+                        {quadratura?.openingBalanceCents != null ? (
+                            <>
+                                <br />
+                                Apertura {formatEuroCents(quadratura.openingBalanceCents)}
+                                {quadratura.statementClosingCents != null
+                                    ? ` · Ultima chiusura ${formatEuroCents(quadratura.statementClosingCents)}`
+                                    : ''}
+                            </>
+                        ) : null}
+                    </p>
+                    {quadratura?.realBalanceAlignedAt || manualBalanceAlignedAt ? (
+                        <p className="text-[10px] text-slate-400">
+                            Reale allineato{' '}
+                            {new Date(
+                                quadratura?.realBalanceAlignedAt || manualBalanceAlignedAt || ''
+                            ).toLocaleString('it-IT')}
+                        </p>
+                    ) : null}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('gestione')}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left hover:border-[#c5a880] hover:ring-2 hover:ring-[#c5a880]/20 transition-all"
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <Link2 size={12} />
+                        Movimenti da Riconciliare
+                    </span>
+                    <p className="mt-1 text-2xl font-bold font-mono text-slate-900">
+                        {quadratura?.unmatchedTotal ?? '—'}
+                    </p>
+                    <span className="text-[10px] text-[#c5a880] font-semibold">Apri Gestione →</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('fisco')}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left hover:border-[#c5a880] hover:ring-2 hover:ring-[#c5a880]/20 transition-all"
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <FileWarning size={12} />
+                        Documenti Mancanti
+                    </span>
+                    <p className="mt-1 text-2xl font-bold font-mono text-slate-900">
+                        {quadratura?.missingDocuments ?? '—'}
+                    </p>
+                    <span className="text-[10px] text-[#c5a880] font-semibold">Apri Fisco →</span>
+                </button>
+
+                <div
+                    className={`rounded-2xl border p-4 shadow-sm space-y-2 ${
+                        (quadratura?.daClassificareCents ?? 0) !== 0
+                            ? 'border-amber-300 bg-amber-50/80'
+                            : 'border-slate-200 bg-white'
+                    }`}
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <AlertOctagon size={12} />
+                        17900 Da classificare
+                    </span>
+                    {(quadratura?.daClassificareCents ?? 0) !== 0 ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-sm font-bold">
+                            <AlertOctagon size={16} />
+                            {formatEuroCents(quadratura?.daClassificareCents ?? 0)}
+                        </div>
+                    ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
+                            <CheckCircle2 size={16} />
+                            0,00 €
+                        </div>
+                    )}
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                        {quadratura?.daClassificareAccount || '17900 - Partite da classificare'}
+                        {(quadratura?.daClassificareCents ?? 0) !== 0
+                            ? ' — partite aperte senza payout id'
+                            : ' — saldo azzerato'}
+                    </p>
+                    {(quadratura?.quarantineDocumentCount ?? 0) > 0 ? (
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('fisco')}
+                            className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold hover:bg-rose-100 transition-colors"
+                        >
+                            <FileWarning size={14} />
+                            Quarantena: {quadratura?.quarantineDocumentCount} documenti da verificare
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+
+            
+                    </div>
+                )}
+
+                {activeTab === 'avanzate' && (
+                    <div className="p-4 md:p-6 space-y-6 bg-slate-50/50">
+                        <p className="text-xs text-slate-500">
+                            Sezioni di supporto fuori dal percorso normale. Niente di fiscale
+                            definitivo qui.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                href="/dashboard/fornitori"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-sm font-semibold"
+                            >
+                                Gestione Fornitori
+                            </Link>
+                        </div>
+{/* Riquadro Fineco + dati societari */}
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Fineco e IBAN · Dati societari
+                        </p>
+                        <h3 className="text-base font-display font-bold text-slate-900">
+                            {FLOREMORIA_LEGAL_ENTITY.legalName}
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                            Sede legale: {FLOREMORIA_LEGAL_ENTITY.registeredOffice}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber} · REA{' '}
+                            {FLOREMORIA_LEGAL_ENTITY.reaNumber} · Capitale sociale:{' '}
+                            {FLOREMORIA_LEGAL_ENTITY.shareCapital ?? 'Dato non disponibile'}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            Codice SDI:{' '}
+                            <span className="font-mono font-semibold text-slate-800">
+                                {FLOREMORIA_LEGAL_ENTITY.sdiCode}
+                            </span>
+                        </p>
+                    </div>
+                    <div className="shrink-0 w-full sm:w-auto font-mono text-sm space-y-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 sm:min-w-[260px]">
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                Istituto
+                            </span>
+                            <div className="font-semibold text-slate-900 font-sans">
+                                {FLOREMORIA_FINECO_BANK.institute}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                IBAN
+                            </span>
+                            <div className="font-semibold text-slate-900 tracking-wide">
+                                {FLOREMORIA_FINECO_BANK.ibanDisplay}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                BIC / SWIFT
+                            </span>
+                            <div className="text-slate-800">
+                                {FLOREMORIA_FINECO_BANK.bicSepa}{' '}
+                                <span className="text-slate-400">(SEPA)</span> ·{' '}
+                                {FLOREMORIA_FINECO_BANK.bicSwift}{' '}
+                                <span className="text-slate-400">(SWIFT)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                    {editingBalance ? (
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-slate-500">Saldo Fineco</span>
+                            <input
+                                autoFocus
+                                value={balanceDraft}
+                                onChange={(e) => setBalanceDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') void saveManualBalance();
+                                    if (e.key === 'Escape') setEditingBalance(false);
+                                }}
+                                className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm font-mono"
+                            />
+                            <button
+                                type="button"
+                                disabled={savingBalance}
+                                onClick={() => void saveManualBalance()}
+                                className="p-1.5 rounded-lg bg-emerald-600 text-white disabled:opacity-50"
+                                title="Salva"
+                            >
+                                <Check size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setBalanceDraft(stats.balance);
+                                setEditingBalance(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-sm font-mono font-semibold text-slate-800 hover:bg-slate-50 rounded-lg px-2 py-1 border border-slate-100"
+                            title="Modifica saldo Fineco"
+                        >
+                            {formatEuroCents(manualBalanceCents)}
+                            <Pencil size={12} className="text-slate-400" />
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => void copyFinecoIban()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                        <Copy size={13} />
+                        {ibanCopied ? 'IBAN copiato!' : 'Copia IBAN'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void copyFinecoBic()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                        <Copy size={13} />
+                        {bicCopied ? 'BIC copiato!' : 'Copia BIC/SWIFT'}
+                    </button>
+                </div>
+            </div>
+
+            
+                        <details className="group rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-50">
+                                Vista operativa ordini / margini (non fiscale)
                             </summary>
                             <div className="border-t border-slate-100">
-                                <HistoricalFiscalArchivePanel />
+                                <TaxQuarterlyPanel variant="operativo" />
                             </div>
                         </details>
+<details className="group border border-slate-100 rounded-2xl shadow-sm overflow-hidden bg-white">
+                                    <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-5 py-4 bg-slate-50 hover:bg-slate-100">
+                                        <span className="text-lg font-bold text-slate-900">
+                                            Log grezzi checkout Stripe
+                                        </span>
+                                        <span className="text-[11px] font-semibold text-slate-500 group-open:hidden">
+                                            Espandi
+                                        </span>
+                                    </summary>
+                                    <div className="px-5 pt-2 pb-0 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => void loadGateways()}
+                                            className="text-xs text-[#c5a880] hover:text-[#b0936b] font-bold flex items-center gap-1"
+                                        >
+                                            <RefreshCw size={12} />
+                                            Aggiorna logs
+                                        </button>
+                                    </div>
+                                    <div className="dashboard-table-scroll overflow-x-auto border-t border-slate-100 p-5">
+                                        {!gatewayData ? (
+                                            <p className="text-sm text-slate-400 italic py-6 text-center">
+                                                Carica i gateway (tab Gestione) oppure aggiorna i log.
+                                            </p>
+                                        ) : (
+                                        <table className="w-full text-left border-collapse min-w-[800px]">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <th className="px-5 py-3">Orario</th>
+                                                    <th className="px-5 py-3">Rif Ordine</th>
+                                                    <th className="px-5 py-3">Cliente</th>
+                                                    <th className="px-5 py-3 text-right">Importo</th>
+                                                    <th className="px-5 py-3">Esito Pagamento</th>
+                                                    <th className="px-5 py-3">Stato Sessione</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 text-sm">
+                                                {gatewayData.stripe.transactions.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic">Nessuna sessione Stripe recente trovata.</td>
+                                                    </tr>
+                                                ) : (
+                                                    gatewayData.stripe.transactions.map((tx: any) => {
+                                                        const isSuccess = tx.paymentStatus === 'paid';
+                                                        return (
+                                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-5 py-3.5 text-xs text-slate-500">
+                                                                    {formatDateTime(tx.createdAt)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">
+                                                                    {tx.orderNumber}
+                                                                </td>
+                                                                <td className="px-5 py-3.5">
+                                                                    <div className="font-semibold text-slate-800">{tx.customerName}</div>
+                                                                    <div className="text-[10px] text-slate-400">{tx.customerEmail}</div>
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-right font-mono font-semibold">
+                                                                    €{(tx.amountCents / 100).toFixed(2)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5">
+                                                                    {isSuccess ? (
+                                                                        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 uppercase">
+                                                                            Successo
+                                                                        </span>
+                                                                    ) : (
+                                                                        <div className="space-y-1">
+                                                                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 border border-rose-200 text-rose-700 uppercase">
+                                                                                Fallito / Rifiutato
+                                                                            </span>
+                                                                            {tx.errorMessage && (
+                                                                                <p className="text-[10px] text-rose-500 max-w-[200px] leading-tight">{tx.errorMessage}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-xs font-medium text-slate-500 uppercase">
+                                                                    {tx.status}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
+                                        )}
+                                    </div>
+                                </details>
+
                     </div>
                 )}
             </div>

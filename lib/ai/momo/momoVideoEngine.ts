@@ -4,7 +4,11 @@
  * di composizione e un percorso output deterministico sotto public/media/social/momo.
  */
 import path from 'node:path';
-import { buildMomoScript, type MomoScript } from '@/lib/ai/momo/momoStoryteller';
+import {
+    buildMomoScript,
+    type MomoNarrativeFormat,
+    type MomoScript,
+} from '@/lib/ai/momo/momoStoryteller';
 import {
     buildAudioMixPlan,
     type MomoAudioMixPlan,
@@ -23,6 +27,7 @@ export type MomoSocialChannel =
 
 export type MomoRenderRequest = {
     monumentId: string;
+    formatId?: MomoNarrativeFormat;
     voiceId?: string;
     musicId?: string;
     rawFootageId?: string;
@@ -99,7 +104,7 @@ export function toSrt(cues: MomoSubtitleCue[]): string {
  */
 export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
     assertMonumentCertified(req.monumentId);
-    const script = buildMomoScript(req.monumentId);
+    const script = buildMomoScript(req.monumentId, req.formatId);
     if (req.customHookQuestion) {
         script.hookQuestion = req.customHookQuestion;
     }

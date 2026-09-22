@@ -93,7 +93,12 @@ function currentQuadrimester(): number {
     return Math.floor(new Date().getMonth() / 4) + 1;
 }
 
-export default function TaxQuarterlyPanel() {
+export default function TaxQuarterlyPanel({
+    variant = 'fisco',
+}: {
+    /** fisco = commercialista + fatture fee; operativo = sola vista ordini/margini (non fiscale) */
+    variant?: 'fisco' | 'operativo';
+}) {
     const [year, setYear] = useState(new Date().getFullYear());
     const [mode, setMode] = useState<PeriodMode>('quarter');
     const [quarter, setQuarter] = useState(currentQuarter());
@@ -138,32 +143,36 @@ export default function TaxQuarterlyPanel() {
         setLoading(true);
         setMessage(null);
         try {
-            const [regRes, taxRes] = await Promise.all([
-                fetch(`/api/dashboard/finance/tax-register?${periodQuery}`),
-                fetch(
-                    `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${
-                        mode === 'month'
-                            ? Math.floor((month - 1) / 3) + 1
-                            : mode === 'quarter'
-                              ? quarter
-                              : Math.ceil(quadrimester * 1.34)
-                    }${mode === 'month' ? `&month=${month}` : ''}&format=json`
-                ),
-            ]);
-            const regData = await regRes.json();
-            if (!regData.ok) throw new Error(regData.error || 'Errore registro');
-            setReport(regData.report);
+            // Fisco: solo fee Stripe/PayPal (+ download commercialista). Tax-register solo in variante operativa.
+            const taxUrl = `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${
+                mode === 'month'
+                    ? Math.floor((month - 1) / 3) + 1
+                    : mode === 'quarter'
+                      ? quarter
+                      : Math.ceil(quadrimester * 1.34)
+            }${mode === 'month' ? `&month=${month}` : ''}&format=json`;
 
-            const taxData = await taxRes.json();
-            if (taxData.ok && taxData.report?.stripeInvoices) {
-                setStripeInvoices(taxData.report.stripeInvoices);
-            } else {
+            if (variant === 'operativo') {
+                const regRes = await fetch(`/api/dashboard/finance/tax-register?${periodQuery}`);
+                const regData = await regRes.json();
+                if (!regData.ok) throw new Error(regData.error || 'Errore prospetto operativo');
+                setReport(regData.report);
                 setStripeInvoices([]);
-            }
-            if (taxData.ok && taxData.report?.paypalMonthlyFees) {
-                setPaypalFees(taxData.report.paypalMonthlyFees);
-            } else {
                 setPaypalFees([]);
+            } else {
+                setReport(null);
+                const taxRes = await fetch(taxUrl);
+                const taxData = await taxRes.json();
+                if (taxData.ok && taxData.report?.stripeInvoices) {
+                    setStripeInvoices(taxData.report.stripeInvoices);
+                } else {
+                    setStripeInvoices([]);
+                }
+                if (taxData.ok && taxData.report?.paypalMonthlyFees) {
+                    setPaypalFees(taxData.report.paypalMonthlyFees);
+                } else {
+                    setPaypalFees([]);
+                }
             }
         } catch (err) {
             setMessage(err instanceof Error ? err.message : 'Errore caricamento');
@@ -171,7 +180,7 @@ export default function TaxQuarterlyPanel() {
         } finally {
             setLoading(false);
         }
-    }, [periodQuery, year, mode, quarter, month, quadrimester]);
+    }, [periodQuery, year, mode, quarter, month, quadrimester, variant]);
 
     useEffect(() => {
         void loadReport();
@@ -255,6 +264,8 @@ export default function TaxQuarterlyPanel() {
             const blob = await res.blob();
             const cd = res.headers.get('Content-Disposition') || '';
             const match = cd.match(/filename="([^"]+)"/);
+            const provisional = res.headers.get('X-Floremoria-Corrispettivi-Provisional') === '1';
+            const fromSnapshot = res.headers.get('X-Floremoria-Corrispettivi-Snapshot') === '1';
             const qLabel =
                 mode === 'month'
                     ? `T${Math.floor((month - 1) / 3) + 1}`
@@ -271,8 +282,13 @@ export default function TaxQuarterlyPanel() {
             link.click();
             link.remove();
             URL.revokeObjectURL(url);
+            const statusNote = provisional
+                ? 'Trimestre in corso — dati provvisori (live, non congelati).'
+                : fromSnapshot
+                  ? 'Snapshot congelato (trimestre chiuso).'
+                  : 'Generato e congelato.';
             setMessage(
-                `Registro Corrispettivi (commercialista) scaricato: ${filename}. Solo F1+F2; F3 sospeso. Verifica che l’estratto conto Fineco del periodo sia caricato.`
+                `Registro Corrispettivi (commercialista) scaricato: ${filename}. ${statusNote} Solo F1+F2; F3 sospeso. Verifica che l’estratto conto Fineco del periodo sia caricato.`
             );
         } catch (err) {
             setMessage(
@@ -324,15 +340,16 @@ export default function TaxQuarterlyPanel() {
 
     return (
         <div className="p-6 space-y-6">
+            {variant === 'fisco' ? (
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                 <div>
                     <h3 className="text-lg font-semibold text-slate-900 tracking-tight">
-                        Chiusura Trimestrale &amp; Fisco
+                        Registro Corrispettivi (commercialista)
                     </h3>
                     <p className="text-sm text-slate-500 mt-1">
-                        Registro Corrispettivi per il commercialista (F1+F2). Prima di chiudere il
-                        trimestre carica l&apos;estratto conto Fineco aggiornato. Il dossier fiscale
-                        completo resta disponibile come export interno.
+                        Unico motore fiscale: incassi gateway per data pagamento (snapshot se
+                        trimestre chiuso). Prima di chiudere carica l&apos;estratto Fineco. Il
+                        dossier completo resta export interno.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -451,6 +468,82 @@ export default function TaxQuarterlyPanel() {
                     </button>
                 </div>
             </div>
+            ) : (
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div>
+                    <h3 className="text-lg font-semibold text-slate-900 tracking-tight">
+                        Vista operativa ordini / margini
+                    </h3>
+                    <p className="text-sm text-amber-800 mt-1 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        Non è il Registro Corrispettivi fiscale. Periodo su data creazione ordine
+                        (createdAt) — utile per margine e liquidazione fiorista, non per LIPE.
+                        Fonte fiscale: blocco Fisco → Registro Corrispettivi (commercialista).
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        value={mode}
+                        onChange={(e) => setMode(e.target.value as PeriodMode)}
+                        className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                    >
+                        <option value="quarter">Trimestre</option>
+                        <option value="month">Mese</option>
+                        <option value="quadrimester">Quadrimestre</option>
+                    </select>
+                    {mode === 'quarter' ? (
+                        <select
+                            value={quarter}
+                            onChange={(e) => setQuarter(Number(e.target.value))}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        >
+                            <option value={1}>T1 {year}</option>
+                            <option value={2}>T2 {year}</option>
+                            <option value={3}>T3 {year}</option>
+                            <option value={4}>T4 {year}</option>
+                        </select>
+                    ) : mode === 'month' ? (
+                        <select
+                            value={month}
+                            onChange={(e) => setMonth(Number(e.target.value))}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        >
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i + 1} value={i + 1}>
+                                    Mese {i + 1}
+                                </option>
+                            ))}
+                        </select>
+                    ) : (
+                        <select
+                            value={quadrimester}
+                            onChange={(e) => setQuadrimester(Number(e.target.value))}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        >
+                            <option value={1}>QM1</option>
+                            <option value={2}>QM2</option>
+                            <option value={3}>QM3</option>
+                        </select>
+                    )}
+                    <input
+                        type="number"
+                        value={year}
+                        onChange={(e) => setYear(Number(e.target.value))}
+                        className="w-24 px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                        min={2024}
+                        max={2100}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => void loadReport()}
+                        disabled={loading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        Aggiorna
+                    </button>
+                </div>
+            </div>
+            )}
 
             {message && (
                 <div className="text-xs rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
@@ -458,18 +551,18 @@ export default function TaxQuarterlyPanel() {
                 </div>
             )}
 
-            {loading && !report ? (
+            {variant === 'operativo' && (loading && !report ? (
                 <div className="py-16 text-center text-slate-400 text-sm">Caricamento prospetto…</div>
             ) : report ? (
                 <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        <SummaryCard label="Totale incassato" value={euro(report.summary.grossCents)} />
+                        <SummaryCard label="Totale lordo ordini (createdAt)" value={euro(report.summary.grossCents)} />
                         <SummaryCard
                             label="Imponibile fiori 10%"
                             value={euro(report.summary.floralImponibileCents)}
                         />
                         <SummaryCard
-                            label="IVA a debito"
+                            label="IVA stimata su ordini"
                             value={euro(report.summary.ivaDebitoCents)}
                             accent
                         />
@@ -479,16 +572,16 @@ export default function TaxQuarterlyPanel() {
                         />
                     </div>
 
-                    <section className="rounded-2xl border border-slate-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                    <section className="rounded-2xl border border-amber-200 overflow-hidden">
+                        <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
-                                <Receipt size={16} className="text-[#c5a880]" />
+                                <Receipt size={16} className="text-amber-700" />
                                 <h4 className="text-sm font-semibold text-slate-800">
-                                    Registro economico &amp; corrispettivi ({report.summary.rowCount})
+                                    Ordini / margini operativi ({report.summary.rowCount})
                                 </h4>
                             </div>
-                            <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                                Ricevute archiviate: {report.summary.receiptCount}
+                            <span className="text-[10px] uppercase tracking-wide text-amber-800">
+                                Non fiscale · createdAt
                             </span>
                         </div>
                         <div className="dashboard-table-scroll overflow-x-auto">
@@ -572,7 +665,16 @@ export default function TaxQuarterlyPanel() {
                             </table>
                         </div>
                     </section>
+                </>
+            ) : null)}
 
+            {variant === 'fisco' &&
+                (loading && stripeInvoices.length === 0 && paypalFees.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400 text-sm">
+                        Caricamento prospetto…
+                    </div>
+                ) : (
+                <>
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <section className="rounded-2xl border border-slate-200 overflow-hidden">
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
@@ -730,7 +832,7 @@ export default function TaxQuarterlyPanel() {
 
                     <PartnerFeeInvoicesPanel />
                 </>
-            ) : null}
+                ))}
 
             {editRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

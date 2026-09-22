@@ -7,9 +7,11 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
     CERTIFIED_MONUMENTS,
     MOMO_MUSIC_LIBRARY,
+    MOMO_NARRATIVE_FORMATS,
     MOMO_VOICE_PROFILES,
     markMomoRenderReady,
     planMomoVideoRender,
+    type MomoNarrativeFormat,
     type MomoSocialChannel,
 } from '@/lib/ai/momo';
 
@@ -20,6 +22,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
     return NextResponse.json({
         monuments: CERTIFIED_MONUMENTS,
+        formats: MOMO_NARRATIVE_FORMATS,
         voices: MOMO_VOICE_PROFILES,
         music: MOMO_MUSIC_LIBRARY,
     });
@@ -40,10 +43,11 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generate') {
         const monumentId = String(body.monumentId || '');
+        const formatId = body.formatId ? (String(body.formatId) as MomoNarrativeFormat) : undefined;
         const voiceId = body.voiceId && body.voiceId !== 'none' ? String(body.voiceId) : undefined;
         const musicId = String(body.musicId || 'minimal-piano-einaudi-cc0');
         try {
-            const plan = planMomoVideoRender({ monumentId, voiceId, musicId });
+            const plan = planMomoVideoRender({ monumentId, formatId, voiceId, musicId });
             // In assenza di worker esterno: piano pronto per review (status planned).
             // markReady solo se esplicitamente richiesto (preview dashboard).
             const ready =

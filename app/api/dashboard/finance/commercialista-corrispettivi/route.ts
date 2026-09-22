@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const { buffer, preview, fromSnapshot, snapshotVersion, contentHash } =
+        const { buffer, preview, fromSnapshot, snapshotVersion, contentHash, provisional } =
             await buildCommercialistaCorrispettiviXlsxOrdered(period, {
                 forceLive,
                 rettificaMotivo,
@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
                 fromSnapshot,
                 snapshotVersion,
                 contentHash,
+                provisional,
                 forceLive,
                 rettifica: Boolean(rettificaMotivo),
             });
@@ -101,7 +102,9 @@ export async function GET(request: NextRequest) {
                 'Content-Disposition': `attachment; filename="${filename}"`,
                 'Cache-Control': 'no-store',
                 'X-Floremoria-Corrispettivi-Snapshot': fromSnapshot ? '1' : '0',
-                'X-Floremoria-Corrispettivi-Version': snapshotVersion != null ? String(snapshotVersion) : '',
+                'X-Floremoria-Corrispettivi-Provisional': provisional ? '1' : '0',
+                'X-Floremoria-Corrispettivi-Version':
+                    snapshotVersion != null ? String(snapshotVersion) : '',
                 'X-Floremoria-Corrispettivi-Hash': contentHash || '',
             },
         });

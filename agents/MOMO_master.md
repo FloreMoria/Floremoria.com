@@ -24,15 +24,29 @@
 
 ---
 
-## 3. Formula Narrativa & Hook Vincente (Instagram Nativo)
+## 3. Formule Narrative (3 Format Evocativi) & Regola Anti-Spoiler
 1. **Durata Snella (12–25 Secondi):**
    - Ottimizzata per massimizzare il completion rate e la viralità sui feed social.
 
-2. **Hook Sticker Instagram Nativo:**
-   - Badge testo posizionato a centro-schermo / terzo medio: box bianco con angoli arrotondati, testo scuro bold ad alto contrasto.
-   - Domanda di mistero aperta che stimola curiosità e commenti (es. *"Sapete chi è il personaggio molto importante che giace nella cappella di questo piccolo cimitero di campagna?"* oppure *"Sapete chi giaceva in questo bel cimitero sul Lago di Como?"*).
+2. **I 3 Format Narrativi di MOMO:**
+   - **Format 1 · "Il Luogo Sospeso" (Focus Visione & Bellezza):**
+     - *Hook Sticker:* "Ci sono luoghi dove la bellezza del paesaggio incontra la pace eterna." / "Sapete dove si trova questo cimitero affacciato sull'acqua?"
+     - *Mood:* Meraviglia, contemplazione, luce naturale, rispetto.
+   - **Format 2 · "La Scintilla nel Silenzio" (Focus Personaggio & Storia):**
+     - *Hook Sticker:* "In questo angolo appartato riposa chi ha cambiato per sempre la nostra storia."
+     - *Mood:* Mistero intimo, curiosità, tempo di permanenza (watch-time) elevato.
+   - **Format 3 · "La Cura della Memoria" (Focus Gesto & Fiore - Martina):**
+     - *Hook Sticker:* "Un fiore per non dimenticare, anche a distanza di secoli."
+     - *Mood:* Sobrietà botanica, valore del ricordo vivo, firma FloreMoria.
+
+3. **Hook Sticker Instagram Nativo:**
+   - Badge testo a centro-schermo / terzo medio: box bianco con angoli arrotondati, testo scuro bold ad alto contrasto.
    - Badge profilo Instagram `@APP_FLOREMORIA`.
-   - **Nessun box nero ingombrante in basso; nessun testo didascalico che spoilera subito la risposta.**
+
+4. **Regola Ferrea Anti-Spoiler nelle Didascalie:**
+   - **Prima riga della Caption:** SOLO aggancio evocativo e invito al confronto nei commenti (es. *"Riconosci questo scorcio silenzioso? Scrivi nei commenti chi riposa qui prima della fine del video 🌿"*).
+   - **VIETATO** nominare il personaggio storico o il paese nella prima riga del post.
+   - La soluzione va collocata solo in fondo alla caption dopo la linea divisoria `---` oppure rimandando al commento fissato: *"Soluzione nei commenti fissati ⬇️"*.
 
 ---
 

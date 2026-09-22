@@ -6,6 +6,9 @@ export {
 } from '@/lib/ai/momo/momoMonuments';
 export {
     buildMomoScript,
+    MOMO_NARRATIVE_FORMATS,
+    type MomoNarrativeFormat,
+    type MomoFormatDescriptor,
     type MomoScript,
     type MomoScriptBlock,
 } from '@/lib/ai/momo/momoStoryteller';

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Testo del verbale del 19/03 fornito da Barbara"
 sync_source: docs/verbali/19-03-2026.md
-synced_at: 2026-09-22T08:22:42.566Z
+synced_at: 2026-09-22T11:23:32.815Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/19-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

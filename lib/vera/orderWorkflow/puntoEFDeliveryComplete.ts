@@ -105,7 +105,7 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
 
     const floristPhoneRaw = order.partner?.whatsappNumber?.trim();
     const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
-    if (floristPhoneE164) {
+    if (order.partnerId && order.partner && !order.partner.deletedAt && floristPhoneE164) {
         const floristName = extractFirstName(
             order.partner?.ownerName || order.partner?.shopName || ''
         );

@@ -17,13 +17,29 @@ export type ResolvedAgency = {
     masterPartnerId: string | null;
 };
 
-function normalizeCity(s: string): string {
+export function normalizeCityName(s: string): string {
+    if (!s) return '';
     return s
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toUpperCase()
         .replace(/[^A-Z0-9]+/g, ' ')
         .trim();
+}
+
+/**
+ * Suddivide la stringa coverageArea in singoli comuni normalizzati (es. "Como, Brunate; Cernobbio").
+ */
+export function parseCoverageMunicipalities(coverageArea: string | null | undefined): string[] {
+    if (!coverageArea) return [];
+    return coverageArea
+        .split(/[,;\n\r/|]+/)
+        .map((part) => normalizeCityName(part))
+        .filter((part) => part.length > 0);
+}
+
+function normalizeCity(s: string): string {
+    return normalizeCityName(s);
 }
 
 const AGENCY_SELECT = {
@@ -102,10 +118,12 @@ export async function findFuneralAgency(params: {
 }
 
 /**
- * Fallback geografico: fiorista (non B2B) con coverageArea sul comune del cimitero.
+ * Ricerca fiorista partner (non B2B) per copertura geografica esatta del comune del cimitero.
+ * REGOLA TASSATIVA 1 A 1: solo corrispondenza esatta (uguale al 100% dopo normalizzazione).
+ * Vietati categoricamente fallback a raggio, prefisso, inclusione parziale o primo fiorista in lista.
  */
 export async function findFloristByCemeteryCoverage(cemeteryCity: string): Promise<string | null> {
-    const cityNorm = normalizeCity(cemeteryCity);
+    const cityNorm = normalizeCityName(cemeteryCity);
     if (!cityNorm) return null;
 
     const coveragePartners = await prisma.partner.findMany({
@@ -120,9 +138,8 @@ export async function findFloristByCemeteryCoverage(cemeteryCity: string): Promi
     });
 
     const hit = coveragePartners.find((p) => {
-        const cov = normalizeCity(p.coverageArea || '');
-        if (!cov) return false;
-        return cityNorm.includes(cov) || cov.includes(cityNorm.split(' ')[0] || '');
+        const coveredCities = parseCoverageMunicipalities(p.coverageArea);
+        return coveredCities.some((c) => c === cityNorm);
     });
 
     return hit?.id ?? null;

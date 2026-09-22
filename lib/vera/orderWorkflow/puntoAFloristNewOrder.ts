@@ -70,7 +70,14 @@ export async function runPuntoAFloristNewOrder(
         },
     });
 
-    if (!order?.partnerId || !order.partner?.whatsappNumber?.trim()) {
+    if (!order?.partnerId || !order.partner || order.partner.deletedAt) {
+        console.info(
+            `[ORDER DISPATCH] Punto A BLOCCATO: nessun fiorista associato per l'ordine ${order?.orderNumber || orderId}. Zero notifiche WhatsApp.`
+        );
+        return { ok: false, skipped: 'no_partner_assigned' };
+    }
+
+    if (!order.partner.whatsappNumber?.trim()) {
         await setVeraOperationalAlert({
             orderId: orderId,
             type: 'florist_whatsapp_missing',

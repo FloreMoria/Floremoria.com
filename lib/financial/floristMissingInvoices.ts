@@ -362,9 +362,12 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         if (!cityNorm) return null;
         return (
             partners.find((p) => {
-                const cov = normalizeName(p.coverageArea || '');
-                if (!cov) return false;
-                return cityNorm.includes(cov) || cov.includes(cityNorm.split(' ')[0] || '');
+                if (!p.coverageArea) return false;
+                const tokens = p.coverageArea
+                    .split(/[,;\n\r/|]+/)
+                    .map((part) => normalizeName(part))
+                    .filter(Boolean);
+                return tokens.some((c) => c === cityNorm);
             }) || null
         );
     }

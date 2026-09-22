@@ -36,24 +36,13 @@ function toResolvedAgency(partner: Partner): ResolvedAgency {
     };
 }
 
-async function findFloristByProvince(province: string): Promise<string | null> {
-    const florist = await prisma.partner.findFirst({
-        where: {
-            deletedAt: null,
-            isActive: true,
-            partnerType: 'FLORIST',
-            isB2B: false,
-            province,
-        },
-        orderBy: { adminRating: 'desc' },
-        select: { id: true },
-    });
-    return florist?.id ?? null;
-}
-
 /**
  * referralRef può essere id Partner o uniqueCode (fiorista, agenzia o aggregatore).
- * skipAutoFloristAssignment: ordini funerale (FF) — niente coverage/provincia automatica.
+ * skipAutoFloristAssignment: ordini funerale (FF) — niente assegnazione automatica.
+ *
+ * REGOLA TASSATIVA: Solo corrispondenza esatta 1:1 comune-fiorista.
+ * Se il comune non è coperto, partnerId DEVE essere null (UNASSIGNED).
+ * Vietato qualsiasi fallback a livello provinciale o di prossimità.
  */
 export async function resolveCheckoutPartnerAssociations(input: {
     referralRef?: string | null;
@@ -136,17 +125,13 @@ export async function resolveCheckoutPartnerAssociations(input: {
                     ? Number(referralPartner.commissionPercentInclusive)
                     : null;
             if (!skipFlorist) {
-                partnerId =
-                    (await findFloristByCemeteryCoverage(cemeteryCity)) ||
-                    (prov ? await findFloristByProvince(prov) : null);
+                partnerId = cemeteryCity ? await findFloristByCemeteryCoverage(cemeteryCity) : null;
             }
         }
     }
 
     if (!partnerId && !skipFlorist) {
-        partnerId =
-            (cemeteryCity ? await findFloristByCemeteryCoverage(cemeteryCity) : null) ||
-            (prov ? await findFloristByProvince(prov) : null);
+        partnerId = cemeteryCity ? await findFloristByCemeteryCoverage(cemeteryCity) : null;
     }
 
     return {

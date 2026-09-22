@@ -180,6 +180,16 @@ export async function sendPartnerOrderNotifications(
     if (!notifyOpts.emailsOnly && !sandbox) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
+                if (!order.partnerId || !order.partner || order.partner.deletedAt) {
+                    console.info(
+                        `[ORDER DISPATCH] Notifica WhatsApp fiorista BLOCCATA: nessun fiorista per ordine ${order.orderNumber || order.id}`
+                    );
+                    return {
+                        channel: 'whatsapp_florist',
+                        ok: true,
+                        skipped: 'no_partner_assigned',
+                    };
+                }
                 try {
                     const res = await notifyFloristDeliveryLinkForOrder(order.id, {
                         force: true,
@@ -302,6 +312,16 @@ export async function sendPartnerOrderNotifications(
     // Email fiorista: solo FloristOrderBrief. Kill switch ON di default post-incidente.
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (!order.partnerId || !order.partner || order.partner.deletedAt) {
+                console.info(
+                    `[ORDER DISPATCH] Email fiorista BLOCCATA: nessun fiorista per ordine ${order.orderNumber || order.id}`
+                );
+                return {
+                    channel: 'email_florist',
+                    ok: true,
+                    skipped: 'no_partner_assigned',
+                };
+            }
             if (isFloristEmailKillSwitchActive()) {
                 console.warn(
                     '[partner-order-notifications] email_florist BLOCCATA (privacy kill switch 2026-09-16)',

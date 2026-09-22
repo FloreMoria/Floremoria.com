@@ -160,7 +160,11 @@ export async function checkAndNotifyUrgentFloristDeliveries(
             continue;
         }
 
-        const floristPhoneRaw = order.partner?.whatsappNumber?.trim();
+        if (!order.partnerId || !order.partner || order.partner.deletedAt) {
+            continue;
+        }
+
+        const floristPhoneRaw = order.partner.whatsappNumber?.trim();
         const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
 
         if (!floristPhoneE164) {

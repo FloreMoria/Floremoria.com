@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
+import { findFloristByCemeteryCoverage } from '@/lib/orders/resolveAgencyFlorist';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { runFloristScoutForOrderIfNeeded } from '@/lib/ai/floristScoutOrder';
@@ -10,18 +11,12 @@ export type AutoAssignKnownTombResult =
     | { assigned: true; deceasedProfileId: string; partnerId: string; becameInProgress: boolean }
     | { assigned: false; reason: string };
 
-function normalizeCity(s: string): string {
-    return s
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, ' ')
-        .trim();
-}
-
 /**
  * Tomba già censita + fiorista custode primario → collega ordine e passa a IN_PROGRESS.
- * Fallback: fiorista di copertura sul comune del cimitero.
+ * Fallback: fiorista con copertura ESATTA 1:1 sul comune del cimitero.
+ *
+ * Se il comune non è coperto: partnerId resta null (UNASSIGNED), zero notifiche a fioristi,
+ * viene solo attivato lo scout interno staff su fioristi@floremoria.com.
  *
  * Eccezione funerale (FF): mai auto-assegnare — resta in attesa assegnazione manuale staff.
  */
@@ -65,7 +60,7 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
                 partnerLinks: {
                     some: {
                         isPrimary: true,
-                        partner: { deletedAt: null },
+                        partner: { deletedAt: null, isActive: true },
                     },
                 },
             },
@@ -73,7 +68,7 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
                 partnerLinks: {
                     where: {
                         isPrimary: true,
-                        partner: { deletedAt: null },
+                        partner: { deletedAt: null, isActive: true },
                     },
                     include: { partner: { select: { id: true } } },
                     take: 1,
@@ -89,25 +84,14 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
     }
 
     if (!partnerId) {
-        const cityNorm = normalizeCity(order.cemeteryCity);
-        const coveragePartners = await prisma.partner.findMany({
-            where: { deletedAt: null, isActive: true, isB2B: false },
-            select: { id: true, coverageArea: true },
-            take: 500,
-        });
-        const hit = coveragePartners.find((p) => {
-            const cov = normalizeCity(p.coverageArea || '');
-            if (!cov || !cityNorm) return false;
-            return cityNorm.includes(cov) || cov.includes(cityNorm.split(' ')[0] || '');
-        });
-        if (hit) partnerId = hit.id;
+        partnerId = await findFloristByCemeteryCoverage(order.cemeteryCity);
     }
 
     if (!partnerId) {
         await runFloristScoutForOrderIfNeeded(orderId).catch((err) => {
             console.error('[auto-assign-known-tomb] Florist Scout AI fallito (non bloccante):', err);
         });
-        return { assigned: false, reason: 'no_censited_tomb_with_florist' };
+        return { assigned: false, reason: 'no_exact_florist_for_municipality' };
     }
 
     if (!deceasedProfileId && matched) {

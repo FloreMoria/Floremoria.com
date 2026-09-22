@@ -166,7 +166,7 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
         const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
         const alreadyFlaggedFlorist = isWorkflowStepDone(currentFlags, 'puntoG_florist_reminder');
 
-        if (floristPhoneE164 && !alreadyFlaggedFlorist) {
+        if (order.partnerId && order.partner && !order.partner.deletedAt && floristPhoneE164 && !alreadyFlaggedFlorist) {
             const alreadySentFlorist = await wasOrderTemplateSent(
                 order.id,
                 'florist_reminder',

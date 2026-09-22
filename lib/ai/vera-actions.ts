@@ -433,11 +433,19 @@ export async function notifyFloristIfApplicable(
         select: {
             orderNumber: true,
             deceasedName: true,
-            partner: { select: { whatsappNumber: true, shopName: true, ownerName: true } },
+            partnerId: true,
+            partner: { select: { id: true, whatsappNumber: true, shopName: true, ownerName: true, deletedAt: true } },
         },
     });
 
-    const phone = normalizePhoneE164(order?.partner?.whatsappNumber || '');
+    if (!order?.partnerId || !order?.partner || order.partner.deletedAt) {
+        console.info(
+            `[ORDER DISPATCH] Aggiornamento fiorista BLOCCATO: nessun fiorista associato per l'ordine ${order?.orderNumber || orderId}`
+        );
+        return { sent: false, blocked: true, reason: 'nessun fiorista assegnato' };
+    }
+
+    const phone = normalizePhoneE164(order.partner.whatsappNumber || '');
     if (!phone) {
         return { sent: false, blocked: false, reason: 'whatsapp fiorista assente' };
     }

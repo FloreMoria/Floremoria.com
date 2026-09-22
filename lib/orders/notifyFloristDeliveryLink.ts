@@ -55,6 +55,14 @@ export async function notifyFloristDeliveryLinkForOrder(
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
 
+    // BLOCCO TASSATIVO: Se nessun fiorista è assegnato (ordine non coperto o da assegnare), zero notifiche.
+    if (!order.partnerId || !order.partner || order.partner.deletedAt) {
+        console.info(
+            `[ORDER DISPATCH] Notifica fiorista Punto A BLOCCATA: nessun fiorista associato per l'ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: false, skipped: 'no_partner_assigned' };
+    }
+
     if (isFuneralOrderNumber(order.orderNumber) && !options.force) {
         if (!order.partnerId) {
             console.info(
@@ -74,9 +82,6 @@ export async function notifyFloristDeliveryLinkForOrder(
 
     if (order.status !== 'IN_PROGRESS' && !options.force) {
         return { ok: true, skipped: 'not_in_progress' };
-    }
-    if (!order.partnerId || order.partner?.deletedAt) {
-        return { ok: false, skipped: 'no_partner_assigned' };
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);

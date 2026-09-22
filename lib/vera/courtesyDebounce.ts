@@ -63,11 +63,11 @@ const OPERATIONAL_INTENT_KEYWORDS = [
 ];
 
 const ISOLATED_COURTESY_PATTERN =
-    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|buona serata|buona giornata|buona notte|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille)?( a (voi|te|lei))?|ti ringrazio|la ringrazio|molte grazie|prego|di nulla)$/;
+    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|buona serata|buona giornata|buona notte|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille| infinite| di cuore| di tutto| tante| ancora)?( a (voi|te|lei|tutti))?|ti ringrazio|la ringrazio|vi ringrazio|molte grazie|mille grazie|prego|di nulla|non c'è di che|figurati|si figuri)$/i;
 
 /** Ack corti senza richiesta operativa (OK, sì, d'accordo, emoji già coperte altrove). */
 const SHORT_ACK_PATTERN =
-    /^(ok|okay|okey|va bene|va benissimo|daccordo|d'accordo|perfetto|ricevuto|certo|si|sì|ok grazie|okok|👍|🙏|✅|🤝|❤️|🌹)$/;
+    /^(ok|okay|okey|va bene|va benissimo|daccordo|d'accordo|perfetto|ricevuto|certo|si|sì|ok grazie|okok|👍|🙏|✅|🤝|❤️|🌹)$/i;
 
 /** Conferma cortese di data/giorno ("Lunedì va benissimo", "Per sabato ok"). */
 const WEEKDAY_OR_DATE_HINT =
@@ -78,7 +78,10 @@ const SCHEDULE_CONFIRM_HINT =
 
 /** Cortesia di chiusura reciproca: non riaprire loop di saluti. */
 const POST_FAREWELL_COURTESY_PATTERN =
-    /^(anche a (lei|te|voi|loro)|altrettanto|ugualmente|di nulla|prego|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie|ok grazie|va bene grazie)$/;
+    /^(anche a (lei|te|voi|tutti|loro)|altrettanto|ugualmente|di nulla|prego|non c'è di che|figurati|si figuri|grazie( mille| infinite| di cuore| di tutto| ancora)?( a (voi|te|lei|tutti))?|ti ringrazio|la ringrazio|vi ringrazio|molte grazie|mille grazie|ok grazie|va bene grazie)$/i;
+
+const PURE_COURTESY_TOKENS_PATTERN =
+    /^(?:(?:grazie(?:\s+(?:mille|infinite|mille\s+volte|di\s+cuore|di\s+tutto|ancora|tante|mille\s+grazie|davvero))?(?:\s+a\s+(?:voi|te|lei|tutti))?|mille\s+grazie|molte\s+grazie|ti\s+ringrazio|la\s+ringrazio|vi\s+ringrazio|ringrazio|grazie\s+a\s+(?:voi|te|lei|tutti))|(?:buona\s+(?:serata|giornata|notte|continuazione|festa)|buon\s+(?:pomeriggio|lavoro|proseguimento|fine\s+settimana|weekend|giorno)|buongiorno|buonasera|buondi|ciao(?:\s+ciao)?|salve|arrivederci|a\s+presto|a\s+risentirci|a\s+domani|a\s+luned[iì]|ci\s+sentiamo(?:\s+presto)?|alla\s+prossima)|(?:ok(?:ay|ey)?|va\s+ben(?:e|issimo)|perfetto|ricevuto|d\s*accordo|certo|s[iì]|prego|di\s+nulla|non\s+c\s*e\s*di\s+che|figurati|si\s+figuri|anche\s+a\s+(?:lei|te|voi|tutti)|altrettanto|ugualmente)|e|ed|per\s+tutto|di\s+tutto|a\s+tutti|a\s+voi|a\s+lei|a\s+te|\s|[,.!?🌹❤️🙏👍👏✨✅🤝💐😊👋])+$/i;
 
 const EMOJI_ONLY_PATTERN =
     /^(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\s🌹❤️🙏👍👏✨✅🤝])+$/u;
@@ -99,6 +102,22 @@ export function isIsolatedCourtesyMessage(message: string): boolean {
     if (!m) return false;
     if (hasOperationalServiceIntent(message)) return false;
     return ISOLATED_COURTESY_PATTERN.test(m);
+}
+
+/** Rileva messaggi composti di solo congedo / ringraziamento / saluto (es. "Grazie a voi e buona serata"). */
+export function isPureCourtesyOrFarewell(message: string): boolean {
+    const raw = (message || '').trim();
+    if (!raw) return false;
+    if (hasOperationalServiceIntent(raw)) return false;
+    const m = normalizeForCourtesy(raw);
+    if (!m) return false;
+    return (
+        ISOLATED_COURTESY_PATTERN.test(m) ||
+        POST_FAREWELL_COURTESY_PATTERN.test(m) ||
+        SHORT_ACK_PATTERN.test(m) ||
+        isWhatsAppReactionOrEmojiOnly(raw) ||
+        PURE_COURTESY_TOKENS_PATTERN.test(m)
+    );
 }
 
 /** OK / sì / d'accordo isolati senza intento operativo. */
@@ -163,17 +182,14 @@ export function isWhatsAppReactionOrEmojiOnly(message: string): boolean {
 }
 
 /**
- * Dopo un congedo già inviato da VERA/staff, un semplice "Anche a lei" / "Grazie"
- * non merita nuova risposta (evita loop di cortesia).
+ * Dopo un congedo già inviato da VERA/staff, un semplice "Anche a lei" / "Grazie" / "Buona serata"
+ * non merita nuova risposta (evita loop di cortesia e ping-pong infinito).
  */
 export function isRedundantPostFarewellCourtesy(
     message: string,
     session: ChatSession
 ): boolean {
-    const m = normalizeForCourtesy(message);
-    if (!m) return false;
-    if (hasOperationalServiceIntent(message)) return false;
-    if (!POST_FAREWELL_COURTESY_PATTERN.test(m) && !ISOLATED_COURTESY_PATTERN.test(m)) {
+    if (!isPureCourtesyOrFarewell(message)) {
         return false;
     }
 
@@ -183,7 +199,7 @@ export function isRedundantPostFarewellCourtesy(
         .slice(0, 4);
 
     const farewellHints =
-        /buona (giornata|serata|notte)|a presto|arrivederci|restiamo a sua|disposizione|grazie a lei|prego!|🌹/;
+        /buona (giornata|serata|notte)|a presto|arrivederci|a risentirci|restiamo a sua|disposizione|grazie a lei|grazie di cuore|prego!?|buon lavoro|cordialmente|augura il meglio|🌹/;
 
     return recentOutbound.some((msg) => farewellHints.test((msg.body || '').toLowerCase()));
 }
@@ -205,6 +221,7 @@ export function isRedundantAfterScheduleConfirmAck(
         POST_FAREWELL_COURTESY_PATTERN.test(m) ||
         ISOLATED_COURTESY_PATTERN.test(m) ||
         SHORT_ACK_PATTERN.test(m) ||
+        PURE_COURTESY_TOKENS_PATTERN.test(m) ||
         /^(buona serata|a luned[iì]|a presto|grazie mille a voi)/.test(m);
     if (!closingOrAck) return false;
 
@@ -229,16 +246,15 @@ export function isNoiseFragmentMessage(message: string): boolean {
 }
 
 /**
- * Vera non risponde: reaction, cortesia/ack isolati, o ringraziamento dopo congedo.
- * Perché: P0 anti-ridondanza (Simone/Carolina/Benedetta) — niente ping-pong su "Grazie"/"OK"/emoji.
+ * Vera non risponde: reaction, cortesia/ack isolati se ridondanti, o ringraziamento dopo congedo.
+ * Perché: P0 anti-ridondanza e Regola di Terminazione (zero ping-pong su saluti/ringraziamenti).
  */
 export function shouldSilenceVeraReply(message: string, session: ChatSession): boolean {
     if (isNoiseFragmentMessage(message)) return true;
     if (isWhatsAppReactionOrEmojiOnly(message)) return true;
-    if (isIsolatedCourtesyMessage(message)) return true;
-    if (isShortAckWithoutOperationalIntent(message)) return true;
     if (isRedundantPostFarewellCourtesy(message, session)) return true;
     if (isRedundantAfterScheduleConfirmAck(message, session)) return true;
+    if (isShortAckWithoutOperationalIntent(message)) return true;
     return false;
 }
 
@@ -249,27 +265,44 @@ export function buildSymmetricCourtesyReply(params: {
 }): string {
     const m = normalizeForCourtesy(params.message);
     const isFlorist = params.userType === 'FLORIST';
+    const isEvening = /serata|notte/.test(m) || new Date().getHours() >= 18;
+
+    if (isFlorist) {
+        if (/serata|notte/.test(m)) return 'Buona serata e buon lavoro! 🌹';
+        return 'Grazie e buon lavoro! 🌹';
+    }
+
+    if (/serata|notte/.test(m) || isEvening) {
+        return 'Buona serata e a presto! 🌹';
+    }
+
+    if (/giornata/.test(m)) {
+        return 'Buona giornata e a presto! 🌹';
+    }
+
+    if (/grazie|ringrazi/.test(m)) {
+        return 'Grazie a Lei e a presto! 🌹';
+    }
+
     const opening = getOpeningGreeting(params.displayName || '');
-
-    if (/^(grazie|grazie mille|ti ringrazio|la ringrazio|molte grazie)$/.test(m)) {
-        return isFlorist ? 'Prego! Dimmi pure se serve altro.' : 'Prego. Se serve altro, scriva pure qui.';
-    }
-
-    if (
-        /^(buonasera|buona sera|buongiorno|buon giorno|buondi|buon pomeriggio|ciao( ciao)?|salve)$/.test(
-            m
-        )
-    ) {
-        // Orario Italia tassativo — non rispecchiare il saluto dell'utente.
-        return isFlorist
-            ? `${opening} Dimmi pure, come posso aiutarti?`
-            : `${opening} Come posso esserLe utile?`;
-    }
-
-    return isFlorist
-        ? `${opening} Dimmi pure, come posso aiutarti oggi?`
-        : `${opening} Come posso esserLe utile?`;
+    return `${opening} Come posso esserLe utile?`;
 }
+
+export const VERA_TERMINATION_AND_ANTI_LOOP_RULE = `
+REGOLA DI TERMINAZIONE E ANTI-LOOP SUI SALUTI (CRITICAL — ZERO PING-PONG):
+- Quando il cliente/utente o il fiorista invia messaggi di chiusura, ringraziamento o cortesia (es. "Grazie mille", "Grazie a voi e buona serata", "Buona serata", "Di nulla", "Mille grazie"):
+  * PRIMO CONGEDO: se la conversazione è conclusa o l'accordo preso, rispondi con MASSIMO 1 sola frase brevissima di saluto o ringraziamento (max 5-10 parole, es. "Buona serata e a presto! 🌹" o "Grazie a Lei e buona serata! 🌹").
+  * CONGEDI SUCCESSIVI: se l'interlocutore risponde ancora con un ringraziamento o saluto di rimando, o se nello storico recente Vera ha già inviato un saluto/congedo, VERA DEVE TACERE TASSATIVAMENTE (silenzio totale, nessun messaggio inviato).
+- BLOCCO ALLUCINAZIONI TICKET: su semplici ringraziamenti, saluti di commiato o cortesie, È SEVERAMENTE VIETATO aprire ticket, dichiarare di aver preso in carico "richieste speciali", inoltrare allo Staff o notificare chicchessia.
+`.trim();
+
+export const VERA_ANTI_REPETITION_RULE = `
+ANTI-RIPETIZIONE CONTESTUALE (CRITICAL — ZERO BOILERPLATE RIDONDANTE):
+- Analizza TASSATIVAMENTE la cronologia della conversazione prima di rispondere.
+- Se un dato (comune, cimitero, nominativo del defunto, tipologia di fiori, preferenza oraria, data di consegna) è GIÀ stato fornito dal cliente o fiorista nei messaggi precedenti o è presente nel contesto ordine, è SEVERAMENTE VIETATO richiederlo nuovamente o inviare messaggi/template copia-incolla che richiedono gli stessi dettagli.
+- Niente template o messaggi prefabbricati di benvenuto/presa in carico ripetuti a distanza di ore o turni se il cliente ha già interagito.
+- La risposta deve agganciarsi DIRETTAMENTE e con naturalezza all'ultimo punto lasciato in sospeso.
+`.trim();
 
 export const VERA_SYMMETRIC_GREETING_RULE = `
 REGOLA UNIVERSALE — SALUTO SIMMETRICO (Small Talk Debounce):

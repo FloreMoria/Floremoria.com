@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.29 — 21 settembre 2026.
+Versione 1.30 — 22 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -715,6 +715,32 @@ Regole:
 - se un incasso del gateway non trova l'ordine corrispondente, non si esclude: scorporo al
   10% e riferimento `DA_COLLEGARE` (annotazione in Eccezioni per il collegamento).
 
+### 8.5 Congelamento del registro (snapshot immutabile)
+
+**Regola.** Il registro corrispettivi di un trimestre, una volta generato il documento
+commercialista (F1+F2), **si congela**. Il numero non cambia più da solo.
+
+- Alla **prima** generazione del file per `(anno, trimestre)` il sistema salva uno
+  **snapshot immutabile**: data/ora di freeze, hash SHA-256 del contenuto F2, file Excel
+  originale, totali (lordo / imponibile / IVA / n° righe).
+- I download successivi del pulsante commercialista **rigenerano dallo snapshot**: non
+  ricalcolano da gateway, ordini o ledger.
+- Se emerge una correzione, si registra come **rettifica esplicita e datata**, con
+  **motivo obbligatorio**. La rettifica crea una **nuova versione**; il documento
+  originale (versione precedente) resta consultabile. Non si sovrascrive.
+- Un totale fiscale che si muove da solo **non è una fonte autorevole**: non è
+  difendibile davanti a un controllo.
+- Il ricalcolo live (`forceLive`) è ammesso **solo** in diagnostica e **non** sostituisce
+  lo snapshot attivo.
+
+Implementazione: tabella `corrispettivi_register_snapshots`; API
+`/api/dashboard/finance/commercialista-corrispettivi`.
+
+**Distinzione obbligatoria.** Il «Registro economico & corrispettivi» in dashboard
+(`tax-register`, periodi su `Order.createdAt`) **non** è il Registro Corrispettivi
+commercialista (incassi gateway / data pagamento). Non vanno confrontati come se fossero
+la stessa fonte.
+
 ---
 
 ## 9. Foglio Eccezioni
@@ -837,6 +863,12 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.30 — 22 settembre 2026**
+- §8.5 — **Congelamento registro corrispettivi**: snapshot immutabile alla generazione
+  del file commercialista; download successivo dallo snapshot; rettifica solo con motivo
+  datato e nuova versione; divieto di totali fiscali che si ricalcolano da soli.
+- Chiarimento: `tax-register` (ordini) ≠ Registro Corrispettivi commercialista (gateway).
 
 **1.29 — 21 settembre 2026**
 - §5 — **C15** ritarget: confronto corrispettivi/fatture ↔ scritture **Erario c/IVA**

@@ -17,6 +17,12 @@ import {
     isPrepaidSubscriptionPoseOrder,
 } from '@/lib/financial/prepaidSubscriptionOrders';
 import { VAT_PCT_FLORAL } from '@/lib/financial/vat';
+import {
+    freezeCorrispettiviSnapshot,
+    getActiveCorrispettiviSnapshot,
+    periodToQuarterKey,
+    type CorrispettiviSnapshotRow,
+} from '@/lib/financial/corrispettiviRegisterSnapshot';
 
 const EUR_FORMAT = '€ #,##0.00';
 const LORDO_TOLERANCE_CENTS = 1;
@@ -689,14 +695,86 @@ function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): 
     return total;
 }
 
+function extractSnapshotRows(report: TaxQuarterlyReport): CorrispettiviSnapshotRow[] {
+    const sorted = [...report.corrispettivi].sort((a, b) =>
+        (a.paymentDate || a.date).localeCompare(b.paymentDate || b.date)
+    );
+    return sorted.map((r) => {
+        const rate = r.vatRate || VAT_PCT_FLORAL;
+        const ymd = (r.paymentDate || r.date || '').slice(0, 10);
+        return {
+            date: ymd,
+            orderRef: orderRefForExport(r.orderNumber, r.transactionId),
+            channel: r.gateway || '',
+            imponibileCents: r.imponibileCents,
+            vatRate: rate,
+            ivaCents: r.ivaDebitoCents,
+            lordoCents: r.grossCents,
+            transactionId: r.transactionId || null,
+        };
+    });
+}
+
+export type CommercialistaBuildOptions = {
+    /**
+     * true = ignora snapshot e ricalcola dal vivo (solo diagnostica).
+     * Non congela e non sovrascrive lo snapshot attivo.
+     */
+    forceLive?: boolean;
+    /**
+     * Motivo obbligatorio per creare una nuova versione (rettifica).
+     * Congela il ricalcolo live come nuova versione attiva; la precedente resta consultabile.
+     */
+    rettificaMotivo?: string | null;
+};
+
 /**
  * Genera il workbook commercialista (F1 Riepilogo + F2 Registro).
- * F3 sospeso: rientrerà quando l'attribuzione bonifici→consegne sarà corretta.
- * Lancia CommercialistaConsistencyError / CommercialistaSelfCheckError se i controlli falliscono.
+ * Se esiste uno snapshot attivo per il periodo → restituisce quel file (niente ricalcolo).
+ * Prima generazione: calcola, congela con hash, salva bytes.
+ * Rettifica: solo con `rettificaMotivo` esplicito → nuova versione datata.
  */
 export async function buildCommercialistaCorrispettiviXlsxOrdered(
-    period: CommercialistaPeriod
-): Promise<{ buffer: Buffer; preview: CommercialistaCorrispettiviPreview }> {
+    period: CommercialistaPeriod,
+    options: CommercialistaBuildOptions = {}
+): Promise<{
+    buffer: Buffer;
+    preview: CommercialistaCorrispettiviPreview;
+    fromSnapshot: boolean;
+    snapshotVersion: number | null;
+    contentHash: string | null;
+}> {
+    const { year, quarter } = periodToQuarterKey(period);
+    const active = await getActiveCorrispettiviSnapshot(year, quarter);
+
+    if (active && !options.forceLive && !options.rettificaMotivo) {
+        const totals = {
+            salesCount: active.rowCount,
+            imponibileCents: active.imponibileCents,
+            ivaDebitoCents: active.ivaCents,
+            lordoCents: active.lordoCents,
+            byRate: [] as CommercialistaCorrispettiviTotals['byRate'],
+        };
+        return {
+            buffer: Buffer.from(active.xlsxBytes),
+            fromSnapshot: true,
+            snapshotVersion: active.version,
+            contentHash: active.contentHash,
+            preview: {
+                filename: active.filename,
+                periodLabel: periodLabel(period),
+                generatedAtIso: active.frozenAt.toISOString(),
+                f1: totals,
+                f2RowCount: active.rowCount,
+                f2: totals,
+                f3RowCount: 0,
+                f3TotalCents: 0,
+                f3Included: false,
+                consistencyOk: true,
+            },
+        };
+    }
+
     const report = await loadReport(period);
     const dossierTotals = sumCorrispettiviFromReport(report);
 
@@ -717,10 +795,64 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
     // F3 non generato (sospeso) — vedi METODO / handoff commercialista
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+    const filename = commercialistaCorrispettiviFilename(period);
+    const rows = extractSnapshotRows(report);
+
+    let snapshotVersion: number | null = null;
+    let contentHash: string | null = null;
+    let fromSnapshot = false;
+
+    if (!options.forceLive) {
+        const frozen = await freezeCorrispettiviSnapshot({
+            year,
+            quarter,
+            rows,
+            lordoCents: f2Totals.lordoCents,
+            imponibileCents: f2Totals.imponibileCents,
+            ivaCents: f2Totals.ivaDebitoCents,
+            xlsxBytes: buffer,
+            filename,
+            rettificaMotivo: options.rettificaMotivo || null,
+        });
+        snapshotVersion = frozen.snapshot?.version ?? null;
+        contentHash = frozen.snapshot?.contentHash ?? null;
+        fromSnapshot = Boolean(frozen.snapshot);
+        if (frozen.snapshot && !frozen.created) {
+            // Race: snapshot già presente → usa bytes congelati
+            return {
+                buffer: Buffer.from(frozen.snapshot.xlsxBytes),
+                fromSnapshot: true,
+                snapshotVersion: frozen.snapshot.version,
+                contentHash: frozen.snapshot.contentHash,
+                preview: {
+                    filename: frozen.snapshot.filename,
+                    periodLabel: periodLabel(period),
+                    generatedAtIso: frozen.snapshot.frozenAt.toISOString(),
+                    f1: dossierTotals,
+                    f2RowCount: frozen.snapshot.rowCount,
+                    f2: {
+                        salesCount: frozen.snapshot.rowCount,
+                        imponibileCents: frozen.snapshot.imponibileCents,
+                        ivaDebitoCents: frozen.snapshot.ivaCents,
+                        lordoCents: frozen.snapshot.lordoCents,
+                        byRate: dossierTotals.byRate,
+                    },
+                    f3RowCount: 0,
+                    f3TotalCents: 0,
+                    f3Included: false,
+                    consistencyOk: true,
+                },
+            };
+        }
+    }
+
     return {
         buffer,
+        fromSnapshot,
+        snapshotVersion,
+        contentHash,
         preview: {
-            filename: commercialistaCorrispettiviFilename(period),
+            filename,
             periodLabel: periodLabel(period),
             generatedAtIso: generatedAt.toISOString(),
             f1: dossierTotals,

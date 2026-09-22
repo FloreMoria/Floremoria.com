@@ -24,6 +24,7 @@ import {
 import { sendWhatsAppTextMessage, normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { sendStaffPushNotification } from '@/lib/push/staffPush';
+import { isPureCourtesyOrFarewell } from '@/lib/vera/courtesyDebounce';
 
 /** Classi informative per routing fiorista / staff. */
 export type VeraInfoClass =
@@ -78,7 +79,7 @@ const ECONOMIC_LEAK_PATTERN =
     /\b(prezz|scont|rimbors|fattur|ricevut|pagament|paypal|stripe|bonific|iban|margine|compenso|euro|€|\d+[.,]\d{2})\b/i;
 
 const CONFIDENTIAL_PATTERN =
-    /\b(fattur[ae]?|ricevut[ae]?|scont[oi]|rimbors\w*|prezz[oi]|pagament\w*|paypal|stripe|bonific\w*|iban|carta\s+di\s+credito|home\s*banking|transazion\w*|nota\s+privat)/i;
+    /\b(fattur[ae]|ricevut[ae]\b|ricevut[ae]\s+(?:fiscal[ei]|di\s+pagamento)|scont[oi]|rimbors\w*|prezz[oi]|pagament\w*|paypal|stripe|bonific\w*|iban|carta\s+di\s+credito|home\s*banking|transazion\w*|nota\s+privata?)\b/i;
 
 const ALERT_PATTERN =
     /\b(annull\w*|cancell\w*|reclamo|lament\w*|non\s+va\s+bene|sbagliat\w*|last[\s-]?minute|all'?ultimo\s+momento|urgenti?ss?im\w*|sospend\w*|rifiut\w*\s+l'?ordine)\b/i;
@@ -126,7 +127,7 @@ export function classifyAndExtractVeraMessage(message: string): {
     const fragments: VeraClassifiedFragment[] = [];
     const extracted: VeraExtractedOrderData = {};
 
-    if (!text) {
+    if (!text || isPureCourtesyOrFarewell(text)) {
         return { classes, fragments, extracted };
     }
 
@@ -567,7 +568,7 @@ export function buildVeraRegistrationConfirmations(
     if (extracted.deliveryPreference || extracted.productDetail || extracted.notes) {
         hints.push(`Ho annotato le Sue preferenze per la consegna.`);
     }
-    if (extracted.internalNotes || opts.confidentialOnly) {
+    if (extracted.internalNotes && extracted.internalNotes.trim().length > 3) {
         hints.push(
             `Ho preso in carico la Sua richiesta speciale e l'ho affidata direttamente al nostro Staff, che se ne prenderà cura con la massima attenzione.`
         );

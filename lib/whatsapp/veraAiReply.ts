@@ -12,8 +12,11 @@
 
 import {
     buildCourtesyScheduleConfirmReply,
+    buildSymmetricCourtesyReply,
     isCourtesyScheduleConfirmation,
     isIsolatedCourtesyMessage,
+    isPureCourtesyOrFarewell,
+    isRedundantPostFarewellCourtesy,
     isShortAckWithoutOperationalIntent,
     shouldSilenceVeraReply,
 } from '@/lib/vera/courtesyDebounce';
@@ -427,6 +430,7 @@ async function replyViaGeminiInActiveWindow(
     } else {
         replyText = stripClosingSignature(replyText);
     }
+    replyText = preventRepetitiveOutbound(replyText, session);
     replyText = stripClosingSignature(replyText);
     if (shouldAppendSignature(message) && !replyText.includes(VERA_CLOSING_SIGNATURE)) {
         replyText = `${replyText}\n\n${VERA_CLOSING_SIGNATURE}`;
@@ -609,6 +613,22 @@ export async function generateVeraReply(
     // Reaction / cortesia / ack isolati: nessun messaggio in uscita.
     if (shouldSilenceVeraReply(message, session)) {
         return { text: '', source: 'silence', shouldEscalate: false };
+    }
+
+    // Regola di Terminazione sui Saluti: se è un congedo/ringraziamento puro, rispondi al massimo 1 volta brevemente o taci.
+    if (isPureCourtesyOrFarewell(message)) {
+        if (isRedundantPostFarewellCourtesy(message, session)) {
+            return { text: '', source: 'silence', shouldEscalate: false };
+        }
+        return {
+            text: buildSymmetricCourtesyReply({
+                message,
+                userType: session.userType,
+                displayName: getDisplayNameFromSession(session, callerContext),
+            }),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
     }
 
     // ── Richieste link cataloghi e navigazione sito (priorità deterministica immediata) ──
@@ -799,7 +819,7 @@ export async function generateVeraReply(
         }
     }
 
-    if (session.userType !== 'FLORIST' && callerContext.phoneE164 && !isIsolatedCourtesyMessage(message) && !isShortAckWithoutOperationalIntent(message)) {
+    if (session.userType !== 'FLORIST' && callerContext.phoneE164 && !isIsolatedCourtesyMessage(message) && !isShortAckWithoutOperationalIntent(message) && !isPureCourtesyOrFarewell(message)) {
         const activeOrder = await lookupActiveOrderByPhone(callerContext.phoneE164);
         const orderForMod = activeOrder || (await lookupLastOrderByPhone(callerContext.phoneE164));
         if (orderForMod && orderForMod.status !== 'COMPLETED' && orderForMod.status !== 'CANCELLED') {
@@ -1101,8 +1121,8 @@ export async function generateVeraReply(
         replyText = stripClosingSignature(replyText);
     }
 
-    // ── Sanitizzazione Anti-Boilerplate: blocco reinvio conferma presa in carico ──
-    replyText = stripRecycledConfirmationBoilerplate(replyText);
+    // ── Sanitizzazione Anti-Boilerplate e Anti-Ripetizione ──────────────────────
+    replyText = preventRepetitiveOutbound(replyText, session);
 
     // ── Firma di chiusura (solo su congedo esplicito dell'Utente) ─────────────
     replyText = stripClosingSignature(replyText);
@@ -1126,4 +1146,33 @@ export function stripRecycledConfirmationBoilerplate(text: string): string {
     cleaned = cleaned.replace(/Le\s+confermiamo\s+abbiamo\s+preso\s+in\s+carico\s+il\s+Suo\s+omaggio\s+floreale\s+nel\s+ricordo\s+di\s+[^\n.]*[\n.]*/gi, '');
 
     return cleaned.trim();
+}
+
+/**
+ * Impedisce la ripetizione di saluti o frasi già inviate negli ultimi turni.
+ * Garantisce che VERA non risaluti formalmente né ripeta formule stereotipate a conversazione avviata.
+ */
+export function preventRepetitiveOutbound(candidateText: string, session: ChatSession): string {
+    if (!candidateText) return candidateText;
+    let text = stripRecycledConfirmationBoilerplate(candidateText);
+
+    const recentOutbound = [...session.messages]
+        .reverse()
+        .filter((m) => m.direction === 'OUTBOUND' && m.body?.trim())
+        .slice(0, 4)
+        .map((m) => m.body!.trim());
+
+    if (recentOutbound.length > 0 && session.userType !== 'FLORIST') {
+        const hasRecentGreeting = recentOutbound.some((body) =>
+            /^(buongiorno|buona sera|buonasera|buon pomeriggio|gentile\s+\w+)/i.test(body)
+        );
+        if (hasRecentGreeting) {
+            const stripped = text.replace(/^(buongiorno|buona sera|buonasera|buon pomeriggio)[,\s]+(gentile\s+\w+[,\s]*)?/i, '').trim();
+            if (stripped.length > 10) {
+                text = stripped.charAt(0).toUpperCase() + stripped.slice(1);
+            }
+        }
+    }
+
+    return text.trim();
 }

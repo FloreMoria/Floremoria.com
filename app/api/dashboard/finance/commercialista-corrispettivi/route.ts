@@ -11,6 +11,7 @@ import {
     fiscalPeriodFilenameStamp,
     parseFiscalPeriodParam,
 } from '@/lib/financial/trimestreLabel';
+import { listCorrispettiviSnapshots } from '@/lib/financial/corrispettiviRegisterSnapshot';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -18,10 +19,12 @@ export const maxDuration = 120;
 /**
  * GET /api/dashboard/finance/commercialista-corrispettivi
  * ?year=2026&quarter=2|T2|YEAR&format=xlsx|json
+ * ?forceLive=1 — solo diagnostica: ricalcola senza toccare lo snapshot
+ * ?rettifica=motivo — nuova versione congelata (motivo obbligatorio)
+ * ?listSnapshots=1 — elenco versioni (json)
  *
- * Export commercialista: soli F1+F2 (Registro Corrispettivi). F3 sospeso.
- * NON passa dai controlli dossier C1–C15: C15 rosso non può bloccare questo download
- * (fonte = registro corrispettivi, indipendente da Erario/CE).
+ * Export commercialista: soli F1+F2. Dopo il primo freeze, il download legge lo snapshot
+ * immutabile (METODO — congelamento registro corrispettivi).
  */
 export async function GET(request: NextRequest) {
     const auth = await requireDashboardAdmin();
@@ -36,6 +39,9 @@ export async function GET(request: NextRequest) {
                 searchParams.get('trimestre')
         );
         const format = (searchParams.get('format') || 'xlsx').toLowerCase();
+        const forceLive = searchParams.get('forceLive') === '1';
+        const rettificaMotivo = (searchParams.get('rettifica') || '').trim() || null;
+        const listSnapshots = searchParams.get('listSnapshots') === '1';
 
         if (!Number.isFinite(year) || year < 2020 || year > 2100) {
             return NextResponse.json({ ok: false, error: 'Anno non valido' }, { status: 400 });
@@ -46,14 +52,45 @@ export async function GET(request: NextRequest) {
                 ? { kind: 'year', year }
                 : { kind: 'quarter', year, quarter: periodParam as TaxQuarter };
 
-        const { buffer, preview } = await buildCommercialistaCorrispettiviXlsxOrdered(period);
+        const quarterKey = period.kind === 'year' ? 0 : period.quarter;
+
+        if (listSnapshots) {
+            const versions = await listCorrispettiviSnapshots(year, quarterKey);
+            return NextResponse.json({ ok: true, year, quarter: quarterKey, versions });
+        }
+
+        if (rettificaMotivo && rettificaMotivo.length < 8) {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    error: 'Rettifica: indicare un motivo esplicito (min 8 caratteri).',
+                },
+                { status: 400 }
+            );
+        }
+
+        const { buffer, preview, fromSnapshot, snapshotVersion, contentHash } =
+            await buildCommercialistaCorrispettiviXlsxOrdered(period, {
+                forceLive,
+                rettificaMotivo,
+            });
 
         if (format === 'json') {
-            return NextResponse.json({ ok: true, preview });
+            return NextResponse.json({
+                ok: true,
+                preview,
+                fromSnapshot,
+                snapshotVersion,
+                contentHash,
+                forceLive,
+                rettifica: Boolean(rettificaMotivo),
+            });
         }
 
         const stamp =
-            period.kind === 'year' ? `${year}_ANNO` : `${year}_${fiscalPeriodFilenameStamp(period.quarter)}`;
+            period.kind === 'year'
+                ? `${year}_ANNO`
+                : `${year}_${fiscalPeriodFilenameStamp(period.quarter)}`;
         const filename = preview.filename || `FloreMoria_${stamp}_Corrispettivi.xlsx`;
 
         return new NextResponse(new Uint8Array(buffer), {
@@ -63,6 +100,9 @@ export async function GET(request: NextRequest) {
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition': `attachment; filename="${filename}"`,
                 'Cache-Control': 'no-store',
+                'X-Floremoria-Corrispettivi-Snapshot': fromSnapshot ? '1' : '0',
+                'X-Floremoria-Corrispettivi-Version': snapshotVersion != null ? String(snapshotVersion) : '',
+                'X-Floremoria-Corrispettivi-Hash': contentHash || '',
             },
         });
     } catch (error) {

@@ -735,6 +735,41 @@ model SystemState {
   @@map("system_state")
 }
 
+/**
+ * Snapshot immutabile del Registro Corrispettivi commercialista (F1+F2).
+ * Una volta congelato, il download non ricalcola: serve lo snapshot.
+ * Rettifiche = nuova versione datata con motivo; le versioni precedenti restano consultabili.
+ */
+model CorrispettiviRegisterSnapshot {
+  id               String   @id @default(cuid())
+  year             Int
+  /** 1–4 trimestre; 0 = anno intero */
+  quarter          Int
+  version          Int      @default(1)
+  /** Solo una versione attiva per (year, quarter) alimenta il download. */
+  isActive         Boolean  @default(true) @map("is_active")
+  frozenAt         DateTime @map("frozen_at")
+  contentHash      String   @map("content_hash") @db.VarChar(64)
+  sourceEngine     String   @default("gateway_corrispettivi") @map("source_engine") @db.VarChar(64)
+  rowCount         Int      @map("row_count")
+  lordoCents       Int      @map("lordo_cents")
+  imponibileCents  Int      @map("imponibile_cents")
+  ivaCents         Int      @map("iva_cents")
+  /** Righe canoniche F2 (JSON) per audit / ricostruzione. */
+  rowsJson         Json     @map("rows_json")
+  /** File Excel consegnato (documento originale). */
+  xlsxBytes        Bytes    @map("xlsx_bytes")
+  filename         String   @db.VarChar(180)
+  /** Motivo se questa versione è una rettifica esplicita. */
+  rettificaMotivo  String?  @map("rettifica_motivo") @db.Text
+  rettificaAt      DateTime? @map("rettifica_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@unique([year, quarter, version])
+  @@index([year, quarter, isActive])
+  @@map("corrispettivi_register_snapshots")
+}
+
 /** Sottoscrizioni Web Push (VAPID) dei dispositivi staff per avvisi WhatsApp. */
 model StaffPushSubscription {
   id        String   @id @default(cuid())

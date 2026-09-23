@@ -31,6 +31,7 @@ import {
   ArrowRight,
   BarChart3,
 } from 'lucide-react';
+import MomoVideoPanel from '@/components/dashboard/MomoVideoPanel';
 
 type Campaign = {
   id: string;
@@ -58,6 +59,7 @@ const SOCIAL_TABS = [
   { id: 'META_FACEBOOK', label: 'Facebook', icon: '👥', color: 'from-blue-600 to-indigo-700' },
   { id: 'TIKTOK', label: 'TikTok', icon: '🎵', color: 'from-slate-900 to-black' },
   { id: 'YOUTUBE_SHORTS', label: 'YT Shorts', icon: '▶️', color: 'from-red-600 to-rose-800' },
+  { id: 'MOMO_VIDEO_ENGINE', label: 'MOMO Reels 9:16', icon: '🏛️', color: 'from-emerald-600 to-teal-800' },
   { id: 'PINTEREST', label: 'Pinterest', icon: '📌', color: 'from-red-700 to-red-900' },
   { id: 'LINKEDIN', label: 'LinkedIn', icon: '💼', color: 'from-blue-700 to-cyan-800' },
   { id: 'GOOGLE_ADS', label: 'Google Ads', icon: '📢', color: 'from-amber-500 to-yellow-600' }
@@ -1387,8 +1389,15 @@ export default function CampaignsDashboardClient() {
         </div>
       )}
 
-      {/* FILTRI DI STATO + TOGGLE METRICHE */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* SEZIONE DEDICATA MOMO VIDEO ENGINE */}
+      {activeTab === 'MOMO_VIDEO_ENGINE' ? (
+        <div className="animate-fade-in">
+          <MomoVideoPanel />
+        </div>
+      ) : (
+        <>
+          {/* FILTRI DI STATO + TOGGLE METRICHE */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 p-1 rounded-2xl">
             {['ALL', 'APPROVED', 'PUBLISHED', 'REJECTED', 'DRAFT'].map(status => (
@@ -1854,6 +1863,8 @@ export default function CampaignsDashboardClient() {
           ))}
         </div>
       )}
+    </>
+    )}
 
       {/* MODALE PUBBLICAZIONE TIKTOK (linee guida Direct Post API) */}
       {showTiktokPublishModal && (

@@ -1,0 +1,179 @@
+# MOMO — Foto consegne sui social (decisioni titolare + piano)
+
+> **Aggiornato:** 2026-09-24 (decisioni titolare)  
+> **Stato:** documentazione + verifiche sola lettura. **Nessuno sviluppo** senza OK.  
+> **Nessuna Fase 2 contabilità** senza OK.  
+> **Bozza testi legali:** `docs/momo-foto-consegne-testi-legali-bozza.md` (da far validare a Iubenda/avvocato).
+
+---
+
+## 1. Decisioni approvate dal titolare (2026-09-24)
+
+### 1.1 Consenso — STRADA A (approvata)
+
+- **Nessun consenso obbligatorio** al checkout.
+- L’**informativa privacy** dichiara che le foto di consegna possono essere usate **in forma anonima** per la promozione del brand.
+- Il cliente può **rifiutare** con:
+  - casella **facoltativa** al checkout: «non usate le mie foto»; **oppure**
+  - richiesta via email.
+- Le foto dei clienti che rifiutano **non entrano mai** nella coda Momo.
+
+### 1.2 Ambito foto
+
+- Solo foto **«dopo»** la consegna.
+- **Senza persone** riconoscibili.
+
+### 1.3 Pubblicazione
+
+- Pubblica solo **Admin** o **Super Admin**, dopo aver guardato la foto.
+- Traccia obbligatoria: **chi** ha approvato e **quando**.
+- **Nessuna pubblicazione automatica** su alcun social.
+
+---
+
+## 2. Regole di anonimizzazione (tutti i social, senza eccezioni)
+
+Valide per **Pinterest, Instagram, Facebook e ogni social futuro**. Replicate in `agents/MOMO_master.md` §7.
+
+1. **Originali intatti:** le prove di consegna non si modificano mai; si lavora solo su **copia**.
+2. **Inquadrature strette sui fiori:** nessuna parte riconoscibile della tomba (forma, marmo, decorazioni, tombe vicine).
+3. **Da eliminare comunque:** volti e foto di defunti, nomi, cognomi, date, epigrafi, nastri e biglietti con dediche, targhe, persone.
+4. **Strip metadati:** GPS, data scatto, dispositivo (EXIF e analoghi).
+5. **Attesa minima:** pubblicazione solo dopo **almeno 4 settimane** dalla consegna  
+   *(il team può proporre un valore diverso, motivandolo — vedi §6.3)*.
+6. **Testi post:** nessun nome, nessuna data, **nessun cimitero indicato**.
+7. Solo asset in coda Momo **«Da approvare»** → approvati da Admin/Super Admin.
+
+---
+
+## 3. Verifiche sola lettura (2026-09-24) — niente cancellazioni/modifiche eseguite
+
+### 3.a Le 36 foto `/social-ready/` sono mai state pubblicate?
+
+**Inventario DB (sola lettura):**
+
+| Esito | Quante | Note |
+|-------|--------|------|
+| Con `socialReadyPrimaryUrl` | **36** | Copia Sharp su blob `/social-ready/` |
+| Marcate pubblicate (`socialPublishedChannels` non vuoto) | **9** | Tutte: `META_INSTAGRAM` + `META_FACEBOOK` |
+| Non marcate pubblicate | **27** | Solo generate, non in coda publish |
+| Pinterest da queste URL | **0** | `pinterest-daily` usa ancora temi **Unsplash** |
+| Righe `marketing_campaigns` con URL `social-ready` / `foto-consegne` | **0** | Il pipeline delivery-proof aggiorna i canali sul proof **senza** salvare campagna collegata |
+
+**Le 9 pubblicate (IG + FB)** — data pubblicazione ≈ `DeliveryProof.updatedAt` (ultimo write che include il push dei canali; tipicamente cron marketing del giorno dopo):
+
+| Ordine | Consegna | Sanificata | Publish stimato (UTC) | Giorni consegna→publish | Canali |
+|--------|----------|------------|----------------------|-------------------------|--------|
+| FT-MC-26-003 | 2026-07-04 | 2026-07-14 | 2026-09-13* | ~72* | IG+FB |
+| FT-PD-26-001 | 2026-07-16 | 2026-07-16 | 2026-07-17 | ~1 | IG+FB |
+| FT-ME-26-001 | 2026-07-17 | 2026-07-16 | 2026-07-17 | ~0 | IG+FB |
+| FT-MB-26-001 | 2026-07-22 | 2026-07-22 | 2026-07-23 | ~1 | IG+FB |
+| FF-CO-26-001 | 2026-07-22 | 2026-07-22 | 2026-07-23 | ~1 | IG+FB |
+| FT-MC-26-005 | 2026-07-30 | 2026-07-30 | 2026-07-31 | ~1 | IG+FB |
+| FT-CS-26-004 | 2026-08-01 | 2026-08-02 | 2026-08-04 | ~3 | IG+FB |
+| FT-PA-26-007 | 2026-08-01 | 2026-08-05 | 2026-08-06 | ~5 | IG+FB |
+| FT-ME-26-002 | 2026-08-06 | 2026-08-05 | 2026-08-06 | ~0 | IG+FB |
+
+\* `updatedAt` di FT-MC-26-003 è anomalo (settembre): può riflettere un re-touch successivo; i canali risultano comunque valorizzati.
+
+**Attesa 4 settimane:** **nessuna** delle 9 rispetta la nuova regola (tutte pubblicate entro pochi giorni, salvo il caso anomalo MC-003).
+
+**Sample visivo (4/9, sola lettura, file non modificati)** vs regole §2:
+
+| Ordine | Rispetta §2? | Problemi rilevati (senza ripetere PII nel dettaglio) |
+|--------|--------------|------------------------------------------------------|
+| FT-MC-26-003 | **No** | Croce/tomba riconoscibile; non solo fiori |
+| FT-PD-26-001 | **No** | Nastro con testo; mucchio terra/tomba; pezzo marmo vicino |
+| FT-ME-26-001 | **No — grave** | **Nome e date leggibili** su lapide; epigrafe |
+| FT-MB-26-001 | **No — grave** | **Ritratti** di defunti + **nomi e date** su monumento; fiori secondari |
+
+**Conclusione 3.a:** sì, **9/36** risultano pubblicate su Instagram e Facebook (non su Pinterest). **Non** rispettano le regole del punto 2 (attesa 4 settimane; in diversi casi identificabilità alta). Le altre **27** non risultano pubblicate sui social da questo flag.
+
+**Nota collaterale (home):** il carousel homepage usa `photoAfterUrl` (originale), non `/social-ready/` — fuori scope publish social, ma da tenere presente per privacy sito.
+
+**Raccomandazione operativa (richiede OK esplicito, non eseguita):** rimuovere subito dai profili Meta i post/reel collegati alle 9 (soprattutto ME-001 e MB-001); spegnere `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL` (env `=0`) finché non c’è coda Momo + regole §2.
+
+---
+
+### 3.b BARBARA — Strada A e foto pre-informativa
+
+**Verifica:** 2026-09-24.
+
+#### Strada A è sufficiente per legge?
+
+**Risposta: sì, a condizioni — non automatica.**
+
+| Condizione | Perché |
+|------------|--------|
+| Informativa aggiornata **prima** di nuovi usi | Art. 13 GDPR: trasparenza su finalità e base giuridica (Garante — principi fondamentali del trattamento) |
+| Base giuridica documentata | Tipicamente **art. 6.1.f** (legittimo interesse) **oppure** trattamento su dati **effettivamente anonimi**; il LI non è un passepartout per il marketing (orientamento Garante / Federprivacy su bilanciamento) |
+| **Legitimate Interest Assessment (LIA)** scritto | Necessità, aspettative ragionevoli nel contesto del lutto, misure (anonimizzazione stretta, opt-out, review umana, attesa 4 settimane) |
+| Opt-out facile (checkout + email) e **blocco tecnico** coda Momo | Allineato alla Strada A del titolare; opposizione art. 21 se LI |
+| Minimizzazione reale | Se restano nome/volto/lapide, **non** è anonimo → rischio alto (anche art. 2-terdecies Codice Privacy per dati del defunto) |
+
+**Fonti (data verifica 2026-09-24):**
+
+- GDPR art. 5 (limitazione finalità), 6.1.f, 13, 21; Considerando 27 (defunti).
+- D.Lgs. 196/2003 art. **2-terdecies** (diritti sui dati del defunto).
+- Garante Privacy — *Principi fondamentali del trattamento* (liceità, informativa prima del trattamento).
+- Orientamento su LI e marketing: Federprivacy / provvedimenti Garante (LI non automatico; bilanciamento obbligatorio).
+
+> Distinzione: l’art. 130 Codice Privacy (consenso email promozionali) **non** coincide con la pubblicazione di contenuti sul profilo social del brand; restano però obblighi di liceità, trasparenza e minimizzazione sulle immagini.
+
+**Parere etico (SOFIA/ALMA):** Strada A è accettabile solo se l’anonimizzazione è **seria** (come §2) e l’opt-out è visibile; il sample §3.a mostra che lo Sharp attuale **non** basta da solo.
+
+#### Foto di consegne **prima** dell’aggiornamento informativa: si possono usare se rispettano §2?
+
+**Risposta: no (uso marketing nuovo), salvo mitigazioni.**
+
+- Cambiare l’informativa **oggi** non sana retroattivamente la raccolta di ieri per una finalità promozionale **non** comunicata (limitazione della finalità, art. 5.1.b + 13).
+- Anche con crop/blur «a regola», se l’immagine era stata raccolta solo come prova di consegna, l’uso social è un **cambio di finalità**: prima di usarla serve almeno **informativa successiva + possibilità di opporsi** (e rispetto art. 2-terdecies / terzi in foto).
+- **Pratica consigliata:** in coda Momo, per i proof **ante** go-live informativa, **non eleggibili** finché non c’è contattato opt-out / grace period, **oppure** usare solo consegne **dopo** la data di pubblicazione dell’informativa aggiornata.
+
+**Sì solo se:** (i) asset reso **non identificabile** in modo robusto **e** (ii) titolare ha completato informativa + canale di opposizione **e** (iii) avvocato/Iubenda confermano il trattamento dello stock storico — fuori da questa bozza team.
+
+---
+
+## 4. Testi legali
+
+Bozza operativa (non legale firmata):  
+→ **`docs/momo-foto-consegne-testi-legali-bozza.md`**  
+Il titolare la farà verificare con Iubenda o avvocato prima dell’uso.
+
+---
+
+## 5. Piano sviluppo DEVIN (piccoli passi — NON iniziare senza OK)
+
+| # | Passo | Esito | Dipende da |
+|---|--------|-------|------------|
+| **P0** | **Primo passo pronto:** spegnere publish automatico delivery-proof (`MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0` su Vercel `floremoria-dashboard`) + elenco ID Meta da far togliere a mano (9 ordini §3.a) | Stop emorragia | **OK titolare** |
+| P1 | Campo ordine `marketingPhotosOptOut` (default false) + casella checkout + blocco ingresso coda | Strada A tecnica | Testi legali live |
+| P2 | Estendere sanitizer / checklist review: rifiuta se OCR/face o review umana trova lapide/nastro/testo | Allinea §2 | P0 |
+| P3 | Tabella/coda Momo `PENDING_REVIEW` + UI Approva/Scarta + `approvedBy`/`approvedAt` | Decisione Q3 | P1–P2 |
+| P4 | Gate: solo `AFTER`, no persone, opt-out=false, **+28 giorni** da `deliveryDate`, status APPROVED | Regole §2 | P3 |
+| P5 | `pinterest-daily` (e Meta): consuma **solo** approvati; fallback Unsplash se coda vuota | Sostituzione progressiva | P3–P4 |
+| P6 | (Opz.) Vision API face+OCR se rifiuti review > soglia | Costo ALBERTO | Dopo metriche P3 |
+
+**Stash Momo video** (`momo-panel-wip`, `wip-non-fase1`): **non** obbligatori per P0–P5; UI coda può essere modulo separato.
+
+### Primo passo eseguibile (attende OK)
+
+> Impostare su Vercel progetto **floremoria-dashboard** la env  
+> `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0`  
+> e far rimuovere manualmente i post Meta legati agli ordini della tabella §3.a.  
+> **Non eseguito** in questa sessione.
+
+---
+
+## 6. Note ALBERTO / attesa 4 settimane
+
+- Costo tool attuale: ~€0 (Sharp). Costo nascosto: **rimozione post non conformi** + tempo Admin review.
+- **Attesa 4 settimane:** il team **conferma** il valore del titolare (rispetto del lutto + distanza temporale da evento). Alternativa 14 giorni aumenterebbe freschezza contenuti ma riduce il “buffer” emotivo — **non proposta** come default.
+
+---
+
+## 7. Fuori scope finché non c’è OK
+
+- Sviluppo coda Momo / switch Pinterest  
+- Fase 2 contabilità  
+- Cancellazione blob o modifica file social-ready (solo elencati in §3.a)

@@ -87,3 +87,29 @@
   "status": "RENDERED_READY_FOR_PUBLISH"
 }
 ```
+
+---
+
+## 7. Foto di consegne sui social (funzione MOMO — regole fisse)
+
+> Fonte decisioni titolare: `docs/momo-foto-consegne.md` (2026-09-24).  
+> Valgono per **Pinterest, Instagram, Facebook e ogni social futuro**, senza eccezioni.  
+> **Nessuna pubblicazione automatica.**
+
+### 7.1 Policy Strada A (privacy)
+- Nessun consenso obbligatorio al checkout.
+- Informativa: uso promozionale solo di copie **anonimizzate**.
+- Opt-out: casella facoltativa «non usate le mie foto» **oppure** email → quelle foto **non entrano mai** in coda Momo.
+- Solo foto **dopo** consegna, **senza persone**.
+- Pubblica solo **Admin / Super Admin** dopo aver guardato la foto, con traccia `approvedBy` + `approvedAt`.
+
+### 7.2 Anonimizzazione (obbligatoria)
+1. Originali (prova di consegna) **mai** modificati: si lavora su **copia**.
+2. Inquadrature **strette sui fiori**: nessuna parte riconoscibile della tomba (forma, marmo, decorazioni, tombe vicine).
+3. Eliminare: volti/foto di defunti, nomi, cognomi, date, epigrafi, nastri/biglietti con dediche, targhe, persone.
+4. Strip metadati: GPS, data, dispositivo.
+5. Pubblicazione solo dopo **almeno 4 settimane** dalla consegna.
+6. Testi post: nessun nome, nessuna data, **nessun cimitero indicato**.
+
+### 7.3 Coda «Da approvare»
+Ogni copia anonimizzata entra in coda Momo `PENDING_REVIEW`. Solo dopo approvazione umana è eleggibile per i social. Il cron Pinterest/Meta **non** pubblica asset non approvati.

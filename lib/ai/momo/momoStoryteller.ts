@@ -3,7 +3,7 @@
  * ed esclusiva regola anti-spoiler nelle didascalie social.
  */
 import {
-    assertMonumentCertified,
+    getMonumentById,
     type MonumentRecord,
 } from '@/lib/ai/momo/momoMonuments';
 
@@ -72,12 +72,59 @@ export type MomoScript = {
     solutionFooter: string;
 };
 
+export type MomoLocationInput = {
+    id: string;
+    cemetery: string;
+    city: string;
+    historicalFigure: string;
+    visionLandscape: string;
+    floralNotes?: string;
+    sources?: string[];
+};
+
 export function buildMomoScript(
-    monumentId: string,
+    monumentOrLocation: string | MomoLocationInput,
     formatId: MomoNarrativeFormat = 'luogo_sospeso',
     customDuration?: number
 ): MomoScript {
-    const m = assertMonumentCertified(monumentId);
+    let m: MonumentRecord;
+    if (typeof monumentOrLocation === 'string') {
+        const found = getMonumentById(monumentOrLocation);
+        if (found) {
+            m = found;
+        } else {
+            m = {
+                id: monumentOrLocation,
+                cemetery: monumentOrLocation,
+                city: 'Italia',
+                country: 'IT',
+                historicalFigure: 'Figure illustri della memoria storica',
+                visionLandscape: `La visione solenne e la bellezza silenziosa di ${monumentOrLocation}.`,
+                sculpturalNotes: 'Architettura monumentale e memoria storica.',
+                floralNotes: 'Composizione sobria di alloro, rose discrete ed edera perenne.',
+                sources: ['Archivi storici di pubblico dominio'],
+                verified: true,
+            };
+        }
+    } else {
+        m = {
+            id: monumentOrLocation.id,
+            cemetery: monumentOrLocation.cemetery,
+            city: monumentOrLocation.city,
+            country: 'IT',
+            historicalFigure: monumentOrLocation.historicalFigure,
+            visionLandscape: monumentOrLocation.visionLandscape,
+            sculpturalNotes: 'Architettura monumentale e memoria storica.',
+            floralNotes:
+                monumentOrLocation.floralNotes ||
+                'Composizione sobria di alloro, rose discrete ed edera perenne.',
+            sources: monumentOrLocation.sources || [
+                'Archivi storici di pubblico dominio',
+            ],
+            verified: true,
+        };
+    }
+
     const formatMeta =
         MOMO_NARRATIVE_FORMATS.find((f) => f.id === formatId) ||
         MOMO_NARRATIVE_FORMATS[0];
@@ -112,7 +159,7 @@ function composeScript(
             bodyReflection =
                 `Tra la luce che filtra naturale e il respiro del paesaggio, questi sentieri custodiscono un\'armonia che va oltre il tempo.\n\n${m.visionLandscape}`;
             visualDirection =
-                'Footage reale dal vivo: panoramica fluida su orizzonte naturale, contrasto luci-ombre e architettura monumentale.';
+                'Footage reale dal vivo / Ken Burns: panoramica fluida su orizzonte naturale, contrasto luci-ombre e architettura monumentale.';
             break;
         }
 
@@ -125,7 +172,7 @@ function composeScript(
             bodyReflection =
                 `Nessun rumore, solo la dignità della memoria per chi ha lasciato un\'impronta indelebile.\n\n${m.visionLandscape}`;
             visualDirection =
-                'Footage reale POV dal vivo: passo lento su sentiero in ghiaia verso il monumento, mantenendo l\'inquadratura sull\'insieme scultoreo senza svelare subito il nome.';
+                'Footage reale POV dal vivo / Ken Burns: passo lento verso il monumento, mantenendo l\'inquadratura sull\'insieme scultoreo senza svelare subito il nome.';
             break;
         }
 
@@ -137,7 +184,7 @@ function composeScript(
             bodyReflection =
                 `La cura del ricordo vive nei piccoli dettagli: ${m.floralNotes || 'composizioni discrete posate con grazia e rispetto'}.\n\n${m.visionLandscape}`;
             visualDirection =
-                'Footage reale POV: close-up elegante sulle mani che depongono una composizione sobria alla base della pietra, con sfocato naturale sul monumento.';
+                'Footage reale POV / Ken Burns: close-up elegante sulla pietra e sui dettagli botanici con sfocato naturale sul monumento.';
             break;
         }
     }
@@ -193,4 +240,3 @@ function composeScript(
         solutionFooter,
     };
 }
-

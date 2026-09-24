@@ -1,10 +1,8 @@
 /**
- * MOMO Asset Search — Ricerca e download automatico di asset fotografici autentici
- * ad alta risoluzione da archivi aperti (Wikimedia Commons, Wikipedia) per qualsiasi
- * cimitero o monumento storico inserito dall'utente, con fallback a cascata intelligente.
+ * MOMO Asset Search — Ricerca di asset fotografici autentici ad alta risoluzione
+ * da archivi aperti (Wikimedia Commons, Wikipedia) per qualsiasi cimitero o monumento storico.
+ * Compatibile al 100% con ambienti Serverless (zero scritture su filesystem).
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { getMonumentById } from '@/lib/ai/momo/momoMonuments';
 
 export type MomoFetchedAssetResult = {
@@ -16,7 +14,6 @@ export type MomoFetchedAssetResult = {
     visionLandscape: string;
     floralNotes: string;
     imagePaths: string[];
-    localAbsPaths: string[];
     sources: string[];
     summaryExtract?: string;
     fallbackUsed?: boolean;
@@ -37,12 +34,6 @@ export function slugify(str: string): string {
 
 /**
  * Genera una lista ordinata di query di ricerca a specificità decrescente.
- * Es: "Cimitero Comunale di Torremaggiore" ->
- * 1. "Cimitero Comunale di Torremaggiore"
- * 2. "Cimitero Torremaggiore"
- * 3. "Torremaggiore cimitero"
- * 4. "Torremaggiore"
- * 5. "Torremaggiore monumento"
  */
 function buildSearchCandidates(rawQuery: string): string[] {
     const cleaned = rawQuery.trim();
@@ -73,13 +64,12 @@ function buildSearchCandidates(rawQuery: string): string[] {
         }
     }
 
-    // Rimuovi duplicati preservando l'ordine
     return Array.from(new Set(candidates)).filter((c) => c.length >= 2);
 }
 
 /**
- * Ricerca e scarica fotografie storiche autentiche ad alta risoluzione (JPG/PNG)
- * per la location richiesta, con fallback progressivo e salvataggio locale.
+ * Ricerca fotografie storiche autentiche ad alta risoluzione (JPG/PNG)
+ * restituendo direttamente gli URL HTTPS remoti da Wikimedia Commons e Wikipedia.
  */
 export async function searchAndFetchMomoAssets(
     query: string
@@ -90,160 +80,106 @@ export async function searchAndFetchMomoAssets(
     }
 
     const slug = slugify(cleanQuery);
-    const outRelDir = `/media/social/momo/fetched/${slug}`;
-    const outAbsDir = path.join(process.cwd(), 'public', outRelDir);
-    fs.mkdirSync(outAbsDir, { recursive: true });
 
     // 1. Controlla catalogo locale pre-certificato
     const localMatch =
         getMonumentById(slug) ||
         getMonumentById(cleanQuery.toLowerCase().replace(/\s+/g, '-'));
 
-    // 2. Se abbiamo già scaricato 3 o più immagini per questo slug, riusale subito (cache locale)
-    const downloadedImages: { rel: string; abs: string }[] = [];
-    const existingFiles = fs.readdirSync(outAbsDir).filter((f) => f.startsWith('img_'));
-    if (existingFiles.length >= 3) {
-        for (const f of existingFiles.slice(0, 5)) {
-            downloadedImages.push({
-                rel: `${outRelDir}/${f}`,
-                abs: path.join(outAbsDir, f),
-            });
-        }
-    }
-
     const searchCandidates = buildSearchCandidates(cleanQuery);
+    const remoteImageUrls: string[] = [];
     let wikiTitle = cleanQuery;
     let wikiExtract = '';
     const wikiSources: string[] = [];
     let matchedTier = 'exact';
 
-    // 3. Esegui ricerca a cascata se non abbiamo ancora immagini sufficienti
-    if (downloadedImages.length < 3) {
-        for (const candidate of searchCandidates) {
-            if (downloadedImages.length >= 4) break;
+    // 2. Esegui ricerca a cascata
+    for (const candidate of searchCandidates) {
+        if (remoteImageUrls.length >= 4) break;
 
-            // A) Cerca contesto e immagini da Wikipedia
-            try {
-                const wikiSearchUrl = `https://it.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrlimit=2&prop=pageimages|extracts|info&inprop=url&piprop=original|thumbnail&pithumbsize=1920&exintro=1&explaintext=1`;
-                const wikiRes = await fetch(wikiSearchUrl, {
-                    headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
-                });
-                if (wikiRes.ok) {
-                    const wikiData = await wikiRes.json();
-                    const pages = Object.values(wikiData.query?.pages || {}) as any[];
-                    for (const page of pages) {
-                        if (!wikiExtract && page.extract) {
-                            wikiTitle = page.title || wikiTitle;
-                            wikiExtract = (page.extract || '').slice(0, 450);
-                            if (page.fullurl) wikiSources.push(page.fullurl);
-                        }
+        // A) Cerca contesto e immagini da Wikipedia
+        try {
+            const wikiSearchUrl = `https://it.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrlimit=2&prop=pageimages|extracts|info&inprop=url&piprop=original|thumbnail&pithumbsize=1920&exintro=1&explaintext=1`;
+            const wikiRes = await fetch(wikiSearchUrl, {
+                headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
+            });
+            if (wikiRes.ok) {
+                const wikiData = await wikiRes.json();
+                const pages = Object.values(wikiData.query?.pages || {}) as any[];
+                for (const page of pages) {
+                    if (!wikiExtract && page.extract) {
+                        wikiTitle = page.title || wikiTitle;
+                        wikiExtract = (page.extract || '').slice(0, 450);
+                        if (page.fullurl) wikiSources.push(page.fullurl);
+                    }
 
-                        // Scarica l'immagine principale dell'articolo Wikipedia se disponibile
-                        const wikiImgUrl = page.original?.source || page.thumbnail?.source;
-                        if (wikiImgUrl && !wikiImgUrl.includes('.svg') && !wikiImgUrl.includes('.tif')) {
-                            const count = downloadedImages.length + 1;
-                            const ext = wikiImgUrl.toLowerCase().includes('.png') ? '.png' : '.jpg';
-                            const filename = `img_${count}${ext}`;
-                            const absPath = path.join(outAbsDir, filename);
-                            const relPath = `${outRelDir}/${filename}`;
-
-                            if (!fs.existsSync(absPath)) {
-                                try {
-                                    const imgRes = await fetch(wikiImgUrl, {
-                                        headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
-                                    });
-                                    if (imgRes.ok) {
-                                        fs.writeFileSync(absPath, Buffer.from(await imgRes.arrayBuffer()));
-                                        downloadedImages.push({ rel: relPath, abs: absPath });
-                                        if (page.fullurl) wikiSources.push(page.fullurl);
-                                    }
-                                } catch (e) {
-                                    console.warn('[MOMO Search] Wikipedia image download failed:', e);
-                                }
-                            } else {
-                                downloadedImages.push({ rel: relPath, abs: absPath });
-                            }
-                        }
+                    // Prendi l'immagine ad alta risoluzione della pagina Wikipedia
+                    const wikiImgUrl = page.original?.source || page.thumbnail?.source;
+                    if (
+                        wikiImgUrl &&
+                        !wikiImgUrl.includes('.svg') &&
+                        !wikiImgUrl.includes('.tif') &&
+                        !remoteImageUrls.includes(wikiImgUrl)
+                    ) {
+                        remoteImageUrls.push(wikiImgUrl);
+                        if (page.fullurl) wikiSources.push(page.fullurl);
                     }
                 }
-            } catch (e) {
-                console.warn('[MOMO Search] Wikipedia search warning for:', candidate, e);
             }
+        } catch (e) {
+            console.warn('[MOMO Search] Wikipedia fetch error for candidate:', candidate, e);
+        }
 
-            // B) Cerca fotografie reali ad alta risoluzione su Wikimedia Commons
-            try {
-                const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1920`;
-                const commonsRes = await fetch(commonsUrl, {
-                    headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
-                });
+        // B) Cerca fotografie ad alta risoluzione su Wikimedia Commons
+        try {
+            const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1920`;
+            const commonsRes = await fetch(commonsUrl, {
+                headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
+            });
 
-                if (commonsRes.ok) {
-                    const commonsData = await commonsRes.json();
-                    const pages = Object.values(commonsData.query?.pages || {}) as any[];
+            if (commonsRes.ok) {
+                const commonsData = await commonsRes.json();
+                const pages = Object.values(commonsData.query?.pages || {}) as any[];
 
-                    for (const page of pages) {
-                        if (downloadedImages.length >= 4) break;
-                        const info = page.imageinfo?.[0];
-                        if (!info) continue;
-                        const imgUrl = info.thumburl || info.url;
-                        if (!imgUrl) continue;
+                for (const page of pages) {
+                    if (remoteImageUrls.length >= 4) break;
+                    const info = page.imageinfo?.[0];
+                    if (!info) continue;
+                    const imgUrl = info.thumburl || info.url;
+                    if (!imgUrl) continue;
 
-                        const titleLow = (page.title || '').toLowerCase();
-                        // Filtra mappe, grafici, icone e PDF
-                        if (
-                            titleLow.includes('.svg') ||
-                            titleLow.includes('map') ||
-                            titleLow.includes('mappa') ||
-                            titleLow.includes('planimetria') ||
-                            titleLow.includes('icon') ||
-                            titleLow.includes('flag')
-                        ) {
-                            continue;
-                        }
+                    const titleLow = (page.title || '').toLowerCase();
+                    if (
+                        titleLow.includes('.svg') ||
+                        titleLow.includes('map') ||
+                        titleLow.includes('mappa') ||
+                        titleLow.includes('planimetria') ||
+                        titleLow.includes('icon') ||
+                        titleLow.includes('flag')
+                    ) {
+                        continue;
+                    }
 
-                        const count = downloadedImages.length + 1;
-                        const ext = (info.mime || '').includes('png') || imgUrl.toLowerCase().includes('.png') ? '.png' : '.jpg';
-                        const filename = `img_${count}${ext}`;
-                        const absFilePath = path.join(outAbsDir, filename);
-                        const relFilePath = `${outRelDir}/${filename}`;
-
-                        if (!fs.existsSync(absFilePath)) {
-                            try {
-                                const imgRes = await fetch(imgUrl, {
-                                    headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
-                                });
-                                if (imgRes.ok) {
-                                    fs.writeFileSync(absFilePath, Buffer.from(await imgRes.arrayBuffer()));
-                                    downloadedImages.push({ rel: relFilePath, abs: absFilePath });
-                                    if (info.descriptionurl) wikiSources.push(info.descriptionurl);
-                                    matchedTier = candidate;
-                                }
-                            } catch (err) {
-                                console.warn('[MOMO Search] Image download failed for:', imgUrl, err);
-                            }
-                        } else {
-                            downloadedImages.push({ rel: relFilePath, abs: absFilePath });
-                        }
+                    if (!remoteImageUrls.includes(imgUrl)) {
+                        remoteImageUrls.push(imgUrl);
+                        if (info.descriptionurl) wikiSources.push(info.descriptionurl);
+                        matchedTier = candidate;
                     }
                 }
-            } catch (e) {
-                console.warn('[MOMO Search] Wikimedia search error for:', candidate, e);
             }
+        } catch (e) {
+            console.warn('[MOMO Search] Wikimedia search error for candidate:', candidate, e);
         }
     }
 
-    // 4. Fallback se ancora nessuna foto trovata: usa filmati/foto di atmosfera paesaggistica reale
+    // 3. Fallback se ancora nessuna foto trovata: usa filmato/foto paesaggistica locale
     let fallbackUsed = false;
-    if (downloadedImages.length === 0) {
+    if (remoteImageUrls.length === 0) {
         fallbackUsed = true;
-        const fallbackVideo = '/media/social/momo/raw/cimitero_campagna_camminata_pov_real.mp4';
-        const fallbackAbs = path.join(process.cwd(), 'public', fallbackVideo);
-        if (fs.existsSync(fallbackAbs)) {
-            downloadedImages.push({ rel: fallbackVideo, abs: fallbackAbs });
-        }
+        remoteImageUrls.push('/media/social/momo/raw/cimitero_campagna_camminata_pov_real.mp4');
     }
 
-    // 5. Costruzione metadati location, figura e paesaggio
+    // 4. Costruzione metadati location, figura e paesaggio
     const locationName = localMatch?.cemetery || wikiTitle || cleanQuery;
     const city = localMatch?.city || extractCityFromQuery(cleanQuery);
     const historicalFigure = localMatch?.historicalFigure || extractFigure(cleanQuery, wikiExtract);
@@ -266,8 +202,7 @@ export async function searchAndFetchMomoAssets(
         historicalFigure,
         visionLandscape,
         floralNotes,
-        imagePaths: downloadedImages.map((d) => d.rel),
-        localAbsPaths: downloadedImages.map((d) => d.abs),
+        imagePaths: remoteImageUrls,
         sources:
             sources.length > 0
                 ? sources
@@ -331,4 +266,3 @@ function extractFigure(query: string, extract: string): string {
 }
 
 export { searchAndFetchMomoAssets as searchMonumentAssets };
-

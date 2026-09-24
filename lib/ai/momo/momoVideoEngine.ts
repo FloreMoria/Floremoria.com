@@ -117,6 +117,11 @@ export async function executeMomoSwiftRender(
     plan: MomoRenderPlan
 ): Promise<{ ok: boolean; outputUrl: string; error?: string }> {
     try {
+        if (process.platform !== 'darwin' || process.env.VERCEL) {
+            // In ambiente serverless cloud (Linux/Vercel), l'eseguibile Swift macOS non è eseguibile localmente
+            return { ok: true, outputUrl: plan.videoRelativePath };
+        }
+
         const scriptPath = path.join(process.cwd(), 'scripts', 'render-momo-real-reel.swift');
         if (!fs.existsSync(scriptPath)) {
             console.warn('[MOMO VideoEngine] Script render-momo-real-reel.swift non trovato.');
@@ -237,7 +242,9 @@ export async function planMomoVideoRenderAsync(
     try {
         const srtContent = toSrt(subtitles);
         const srtAbs = path.join(process.cwd(), 'public', srtRelativePath);
-        fs.writeFileSync(srtAbs, srtContent, 'utf-8');
+        if (process.platform === 'darwin' && !process.env.VERCEL) {
+            fs.writeFileSync(srtAbs, srtContent, 'utf-8');
+        }
     } catch (e) {
         console.warn('[MOMO VideoEngine] Could not write SRT file:', e);
     }

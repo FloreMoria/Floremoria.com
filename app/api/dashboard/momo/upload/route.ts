@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import fs from 'node:fs';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,12 +19,18 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         if (!file) {
-            return NextResponse.json({ ok: false, error: 'Nessun file fornito per il caricamento.' }, { status: 400 });
+            return NextResponse.json(
+                { ok: false, error: 'Nessun file fornito per il caricamento.' },
+                { status: 400 }
+            );
         }
 
         if (file.size > MAX_UPLOAD_BYTES) {
             return NextResponse.json(
-                { ok: false, error: `Dimensione file (${Math.round(file.size / (1024 * 1024))}MB) supera il limite massimo di 150MB.` },
+                {
+                    ok: false,
+                    error: `Dimensione file (${Math.round(file.size / (1024 * 1024))}MB) supera il limite massimo di 150MB.`,
+                },
                 { status: 413 }
             );
         }
@@ -48,21 +56,46 @@ export async function POST(req: NextRequest) {
             .slice(0, 40) || 'media';
 
         const filename = `${Date.now()}_${cleanBase}${ext}`;
-        const outRelDir = '/media/social/momo/uploads';
-        const outAbsDir = path.join(process.cwd(), 'public', outRelDir);
-
-        fs.mkdirSync(outAbsDir, { recursive: true });
-        const outAbsPath = path.join(outAbsDir, filename);
-        fs.writeFileSync(outAbsPath, buffer);
-
-        const relPath = `${outRelDir}/${filename}`;
         const isVideo =
             file.type.startsWith('video/') ||
             /\.(mp4|mov|webm|m4v|qt|avi|mkv)$/i.test(ext);
 
+        const mimeType =
+            file.type || (isVideo ? 'video/mp4' : ext === '.png' ? 'image/png' : 'image/jpeg');
+
+        // 1. Prova prima il caricamento su Vercel Blob (consigliato per serverless)
+        if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+            try {
+                const blobPath = `marketing/momo/uploads/${filename}`;
+                const blobResult = await putBlobWithAccessFallback(blobPath, buffer, {
+                    contentType: mimeType,
+                    addRandomSuffix: true,
+                    token: process.env.BLOB_READ_WRITE_TOKEN.trim(),
+                });
+
+                return NextResponse.json({
+                    ok: true,
+                    path: blobResult.url,
+                    url: blobResult.url,
+                    name: originalName,
+                    size: file.size,
+                    type: isVideo ? 'video' : 'image',
+                });
+            } catch (blobErr) {
+                console.warn('[MOMO Upload] Vercel Blob upload warning, falling back to /tmp:', blobErr);
+            }
+        }
+
+        // 2. Fallback per ambiente locale o assenza token: scrivi nella cartella temporanea di sistema (/tmp)
+        const tmpDir = path.join(os.tmpdir(), 'momo-uploads');
+        fs.mkdirSync(tmpDir, { recursive: true });
+        const tmpPath = path.join(tmpDir, filename);
+        fs.writeFileSync(tmpPath, buffer);
+
         return NextResponse.json({
             ok: true,
-            path: relPath,
+            path: tmpPath,
+            url: tmpPath,
             name: originalName,
             size: file.size,
             type: isVideo ? 'video' : 'image',
@@ -70,7 +103,10 @@ export async function POST(req: NextRequest) {
     } catch (err) {
         console.error('[MOMO Upload] Error handling file upload:', err);
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Errore interno durante il salvataggio del file' },
+            {
+                ok: false,
+                error: err instanceof Error ? err.message : 'Errore interno durante il caricamento del file',
+            },
             { status: 500 }
         );
     }

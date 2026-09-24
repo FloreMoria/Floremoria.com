@@ -6,6 +6,7 @@ export {
 } from '@/lib/ai/momo/momoMonuments';
 export {
     searchAndFetchMomoAssets,
+    searchMonumentAssets,
     slugify,
     type MomoFetchedAssetResult,
 } from '@/lib/ai/momo/momoAssetSearch';

@@ -129,20 +129,33 @@ export default function MomoVideoPanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'search', query }),
             });
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data?.ok) {
-                throw new Error(data?.error || `Ricerca non riuscita (${res.status})`);
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                let errDetail = `Ricerca non riuscita (${res.status})`;
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.error) errDetail = parsed.error;
+                } catch {
+                    if (text.length > 0 && text.length < 200 && !text.includes('<!DOCTYPE')) {
+                        errDetail = text;
+                    }
+                }
+                throw new Error(errDetail);
             }
-            if (data.assets) {
-                setFetchedAssets(data.assets);
-                setSelectedImages(data.assets.imagePaths || []);
+            const data = await res.json();
+            const assets = data.assets || data;
+            if (assets && (assets.locationName || (assets.imagePaths && assets.imagePaths.length > 0))) {
+                setFetchedAssets(assets);
+                setSelectedImages(assets.imagePaths || []);
                 setUploadedMedia(null);
-                const count = data.assets.imagePaths?.length || 0;
+                const count = assets.imagePaths?.length || 0;
                 setSearchStatusMsg(
                     count > 0
-                        ? `Trovate ${count} fotografie storiche HD per "${data.assets.locationName}".`
-                        : `Nessuna immagine specifica trovata. Verrà usato il patrimonio paesaggistico di ${data.assets.city}.`
+                        ? `Trovate ${count} fotografie storiche HD per "${assets.locationName}".`
+                        : `Nessuna immagine specifica trovata. Verrà usato il patrimonio paesaggistico di ${assets.city}.`
                 );
+            } else {
+                throw new Error(data?.error || 'Nessun asset trovato');
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore durante la ricerca degli asset storici');
@@ -159,14 +172,29 @@ export default function MomoVideoPanel() {
         setError(null);
         try {
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', file, file.name);
             const res = await fetch('/api/dashboard/momo/upload', {
                 method: 'POST',
                 body: formData,
             });
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data?.ok) {
-                throw new Error(data?.error || `Caricamento fallito con errore ${res.status}`);
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                let errDetail = `Caricamento fallito (${res.status})`;
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.error) errDetail = parsed.error;
+                } catch {
+                    if (res.status === 413) {
+                        errDetail = 'Il file video supera il limite consentito di 150MB. Riduci la dimensione o scegli una risoluzione minore.';
+                    } else if (text.length > 0 && text.length < 200 && !text.includes('<!DOCTYPE')) {
+                        errDetail = text;
+                    }
+                }
+                throw new Error(errDetail);
+            }
+            const data = await res.json();
+            if (!data?.ok) {
+                throw new Error(data?.error || `Caricamento fallito (${res.status})`);
             }
             setUploadedMedia({
                 path: data.path,

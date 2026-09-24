@@ -329,3 +329,6 @@ function extractFigure(query: string, extract: string): string {
     }
     return 'Figure illustri della nostra memoria storica';
 }
+
+export { searchAndFetchMomoAssets as searchMonumentAssets };
+

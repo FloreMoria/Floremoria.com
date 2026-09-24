@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
+
+const MAX_UPLOAD_BYTES = 150 * 1024 * 1024; // 150 MB
 
 export async function POST(req: NextRequest) {
     const auth = await requireDashboardAdmin();
@@ -13,7 +17,14 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         if (!file) {
-            return NextResponse.json({ error: 'Nessun file fornito per il caricamento.' }, { status: 400 });
+            return NextResponse.json({ ok: false, error: 'Nessun file fornito per il caricamento.' }, { status: 400 });
+        }
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+            return NextResponse.json(
+                { ok: false, error: `Dimensione file (${Math.round(file.size / (1024 * 1024))}MB) supera il limite massimo di 150MB.` },
+                { status: 413 }
+            );
         }
 
         const originalName = file.name || 'upload.mp4';

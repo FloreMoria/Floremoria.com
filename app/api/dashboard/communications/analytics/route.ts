@@ -121,7 +121,7 @@ export async function GET() {
                 },
             }),
             prisma.memoryGardenOpen.findMany({
-                take: 20,
+                take: 50,
                 orderBy: { openedAt: 'desc' },
                 include: {
                     order: {
@@ -235,45 +235,54 @@ export async function GET() {
             };
         });
 
-        return NextResponse.json({
-            success: true,
-            windowDays: ANALYTICS_WINDOW_DAYS,
-            /** Sessioni: VERA vs staff. */
-            veraAutonomyRate: veraUsageRate,
-            humanEscalationRate: humanUsageRate,
-            veraSessions,
-            humanSessions,
-            totalSessions,
-            gdmOpens,
-            whatsappAudit: {
+        return NextResponse.json(
+            {
+                success: true,
                 windowDays: ANALYTICS_WINDOW_DAYS,
-                /** Totali periodo. */
-                outboundTotal,
-                inboundTotal: inboundInWindow,
-                photosSent: photosOutbound,
-                photosReceived: photosInbound,
-                outside24hCount,
-                outside24hRate: pct(outside24hCount, outboundTotal),
-                veraOutbound,
-                humanOutbound,
-                veraMsgRate,
-                humanMsgRate,
-                /** Campione status Meta. */
-                totalOutbound: statusSampleSize,
-                sentCount,
-                deliveredCount,
-                readCount,
-                failedCount,
-                trackedWithStatus,
-                deliveredOrRead,
-                openOnDeliveredRate,
-                deliveredRate,
-                readRate,
-                failedRate,
-                sentOkVsFailedRate,
-                failedDetails,
+                /** Sessioni: VERA vs staff. */
+                veraAutonomyRate: veraUsageRate,
+                humanEscalationRate: humanUsageRate,
+                veraSessions,
+                humanSessions,
+                totalSessions,
+                gdmOpens,
+                whatsappAudit: {
+                    windowDays: ANALYTICS_WINDOW_DAYS,
+                    /** Totali periodo. */
+                    outboundTotal,
+                    inboundTotal: inboundInWindow,
+                    photosSent: photosOutbound,
+                    photosReceived: photosInbound,
+                    outside24hCount,
+                    outside24hRate: pct(outside24hCount, outboundTotal),
+                    veraOutbound,
+                    humanOutbound,
+                    veraMsgRate,
+                    humanMsgRate,
+                    /** Campione status Meta. */
+                    totalOutbound: statusSampleSize,
+                    sentCount,
+                    deliveredCount,
+                    readCount,
+                    failedCount,
+                    trackedWithStatus,
+                    deliveredOrRead,
+                    openOnDeliveredRate,
+                    deliveredRate,
+                    readRate,
+                    failedRate,
+                    sentOkVsFailedRate,
+                    failedDetails,
+                },
             },
-        });
+            {
+                headers: {
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                    Pragma: 'no-cache',
+                    Expires: '0',
+                },
+            }
+        );
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error('[Communications Analytics API Error]', message);

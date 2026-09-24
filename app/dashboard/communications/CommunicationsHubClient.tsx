@@ -939,7 +939,13 @@ function ControlloTab() {
   const fetchAnalytics = useCallback(async () => {
     try {
       setRefreshing(true);
-      const res = await fetch('/api/dashboard/communications/analytics');
+      const res = await fetch('/api/dashboard/communications/analytics', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      });
       const analytics = await res.json();
       if (analytics.success) {
         setData((prev) => ({

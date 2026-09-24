@@ -86,8 +86,15 @@ export async function handleProofFotoExpiredAccess(
 
     const order = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { buyerEmail: true, customerPhone: true },
+        select: { buyerEmail: true, customerPhone: true, buyerFullName: true },
     });
+
+    if (order) {
+        void recordMemoryGardenOpen(orderId, request, {
+            email: hints?.buyerEmail || order.buyerEmail,
+            name: order.buyerFullName,
+        });
+    }
 
     return NextResponse.redirect(
         buildLoginRedirectUrl({

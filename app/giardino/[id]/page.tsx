@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import Link from 'next/link';
@@ -12,8 +12,13 @@ import {
     resolveCustomerFacingDeliveryDate,
 } from '@/lib/orders/displayDeliveryDate';
 import { getSiteBaseUrl } from '@/lib/site/config';
+import { recordMemoryGardenOpen } from '@/lib/memoryGarden/trackOpen';
 import GardenHeaderShare from '@/components/memorial/GardenHeaderShare';
 import GardenOrderPhotoGallery from '@/components/memorial/GardenOrderPhotoGallery';
+import MemoryGardenTracker from '@/components/memorial/MemoryGardenTracker';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const orderInclude = {
     deliveryProof: true,
@@ -286,13 +291,33 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
         return tb - ta;
     });
 
+    if (user.id !== 'demo-user-123' && timelineOrders.length > 0) {
+        try {
+            const reqHeaders = await headers();
+            const targetOrder = timelineOrders[0];
+            void recordMemoryGardenOpen(targetOrder.id, reqHeaders, {
+                email: user.email || targetOrder.buyerEmail,
+                name: user.name || targetOrder.buyerFullName,
+            });
+        } catch (err) {
+            console.error('[giardino] Errore tracciamento apertura:', err);
+        }
+    }
+
     const gardenSlug = user.uniqueCode?.trim() || user.id;
     const gardenUrl = `${getSiteBaseUrl()}/giardino/${encodeURIComponent(gardenSlug)}`;
     const primaryDeceased = timelineOrders[0]?.deceasedName || 'un caro';
     const senderName = user.name?.trim() || '';
+    const activeOrderId = timelineOrders[0]?.id || null;
 
     return (
         <div className="min-h-screen bg-fm-bg pb-20 pt-28">
+            <MemoryGardenTracker
+                orderId={activeOrderId}
+                slug={userIdOrCode}
+                buyerEmail={user.email}
+                buyerName={user.name}
+            />
             <div className="max-w-4xl mx-auto px-4 lg:px-8">
                 <header className="text-center mb-16">
                     <h1 className="text-4xl md:text-[56px] font-display font-medium text-fm-text leading-tight mb-4">

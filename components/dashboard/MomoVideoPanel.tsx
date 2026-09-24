@@ -31,6 +31,7 @@ const SUGGESTIONS = [
     { label: 'Staglieno, Genova', query: 'Cimitero Monumentale di Staglieno Genova', figure: 'Mazzini, De André' },
     { label: 'Certosa di Bologna', query: 'Cimitero monumentale della Certosa di Bologna', figure: 'Carducci, Morandi' },
     { label: 'Alessandro Volta, Como', query: 'Tomba di Alessandro Volta Camnago Como', figure: 'Alessandro Volta' },
+    { label: 'Torremaggiore, Foggia', query: 'Cimitero Comunale di Torremaggiore', figure: 'Memoria storica pugliese' },
     { label: 'Cimitero Acattolico, Roma', query: 'Cimitero acattolico di Roma', figure: 'Keats, Shelley, Gramsci' },
 ];
 
@@ -48,6 +49,7 @@ export default function MomoVideoPanel() {
 
     // Stato ricerca asset reali & Wikipedia
     const [searchingAssets, setSearchingAssets] = useState(false);
+    const [searchStatusMsg, setSearchStatusMsg] = useState<string | null>(null);
     const [fetchedAssets, setFetchedAssets] = useState<MomoFetchedAssetResult | null>(null);
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
@@ -82,7 +84,7 @@ export default function MomoVideoPanel() {
                 if (cancelled) return;
                 setCatalog(data);
 
-                // Carica automaticamente l'anteprima di Porte Sante Firenze
+                // Carica automaticamente l'anteprima iniziale
                 const planRes = await fetch('/api/dashboard/momo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -119,6 +121,7 @@ export default function MomoVideoPanel() {
         const query = (queryToSearch || locationQuery).trim();
         if (!query) return;
         setSearchingAssets(true);
+        setSearchStatusMsg(`Ricerca in corso su Wikimedia Commons e Wikipedia per "${query}"…`);
         setError(null);
         try {
             const res = await fetch('/api/dashboard/momo', {
@@ -126,22 +129,32 @@ export default function MomoVideoPanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'search', query }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Ricerca asset non riuscita');
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || `Ricerca non riuscita (${res.status})`);
+            }
             if (data.assets) {
                 setFetchedAssets(data.assets);
                 setSelectedImages(data.assets.imagePaths || []);
                 setUploadedMedia(null);
+                const count = data.assets.imagePaths?.length || 0;
+                setSearchStatusMsg(
+                    count > 0
+                        ? `Trovate ${count} fotografie storiche HD per "${data.assets.locationName}".`
+                        : `Nessuna immagine specifica trovata. Verrà usato il patrimonio paesaggistico di ${data.assets.city}.`
+                );
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Errore ricerca asset storici');
+            setError(e instanceof Error ? e.message : 'Errore durante la ricerca degli asset storici');
+            setSearchStatusMsg(null);
         } finally {
             setSearchingAssets(false);
         }
     };
 
-    // Upload file drag & drop
+    // Upload file con tolleranza totale formati
     const handleFileUpload = async (file: File) => {
+        if (!file) return;
         setUploading(true);
         setError(null);
         try {
@@ -151,19 +164,21 @@ export default function MomoVideoPanel() {
                 method: 'POST',
                 body: formData,
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Upload non riuscito');
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || `Caricamento fallito con errore ${res.status}`);
+            }
             setUploadedMedia({
                 path: data.path,
-                name: data.name,
-                size: data.size,
-                type: data.type,
+                name: data.name || file.name,
+                size: data.size || file.size,
+                type: data.type || (file.type.startsWith('video') ? 'video' : 'image'),
             });
             if (data.type === 'image') {
                 setSelectedImages((prev) => [data.path, ...prev]);
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Errore caricamento file');
+            setError(e instanceof Error ? e.message : 'Errore durante il caricamento del file');
         } finally {
             setUploading(false);
         }
@@ -192,7 +207,7 @@ export default function MomoVideoPanel() {
     // Generazione e rendering del Reel con Ken Burns / footage reale
     const generateAndRender = async () => {
         setRendering(true);
-        setRenderStep('Ricerca fonti e composizione documentaristica Ken Burns…');
+        setRenderStep('Composizione e rendering Ken Burns 1080×1920 con audio…');
         setError(null);
         setPublishNote(null);
         try {
@@ -212,8 +227,10 @@ export default function MomoVideoPanel() {
                     autoRender: true,
                 }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Generazione fallita');
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || `Generazione fallita con errore ${res.status}`);
+            }
             setPlan(data.plan);
             if (data.plan.fetchedAssets) {
                 setFetchedAssets(data.plan.fetchedAssets);
@@ -238,8 +255,10 @@ export default function MomoVideoPanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'publish', channels }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Pubblicazione fallita');
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || 'Pubblicazione fallita');
+            }
             setPublishNote(data.note || `Coda: ${data.status}`);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore publish');
@@ -297,6 +316,19 @@ export default function MomoVideoPanel() {
                 </div>
             )}
 
+            {searchStatusMsg && !error && (
+                <div className="rounded-xl border border-stone-200 bg-stone-100/80 px-3.5 py-2 text-xs text-stone-700 flex items-center justify-between">
+                    <span>ℹ️ {searchStatusMsg}</span>
+                    <button
+                        type="button"
+                        onClick={() => setSearchStatusMsg(null)}
+                        className="text-[11px] text-stone-500 hover:text-stone-800 font-bold"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {/* SEZIONE 1: Campo di Testo Aperto & Suggestion Chips */}
             <div className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-xs">
                 <div className="space-y-1">
@@ -315,7 +347,7 @@ export default function MomoVideoPanel() {
                                         void searchAssets();
                                     }
                                 }}
-                                placeholder="Es: Cimitero delle Porte Sante Firenze, Mausoleo di Dante Ravenna, Staglieno Genova…"
+                                placeholder="Es: Cimitero delle Porte Sante Firenze, Tomba di Dante Ravenna, Torremaggiore Foggia, Staglieno Genova…"
                                 className="w-full rounded-xl border border-stone-300 bg-stone-50/50 px-4 py-2.5 text-sm font-medium text-stone-900 placeholder:text-stone-400 focus:border-stone-500 focus:bg-white focus:outline-none transition-colors"
                             />
                         </div>
@@ -370,7 +402,7 @@ export default function MomoVideoPanel() {
                         </span>
                         {fetchedAssets && (
                             <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
-                                Wikimedia Commons CC
+                                {fetchedAssets.fallbackUsed ? 'Archivio Territoriale CC' : 'Wikimedia Commons CC'}
                             </span>
                         )}
                     </div>
@@ -380,7 +412,7 @@ export default function MomoVideoPanel() {
                             <div className="grid grid-cols-4 gap-2">
                                 {fetchedAssets.imagePaths.map((img: string, idx: number) => {
                                     const selected = selectedImages.includes(img);
-                                    const isVideo = /\.(mp4|mov|webm)$/i.test(img);
+                                    const isVideo = /\.(mp4|mov|webm|m4v)$/i.test(img);
                                     return (
                                         <button
                                             key={img}
@@ -437,7 +469,7 @@ export default function MomoVideoPanel() {
                         <div className="rounded-xl border border-stone-100 bg-stone-50 p-3 text-xs space-y-1.5">
                             <div className="flex items-center justify-between text-[11px] font-semibold text-stone-700">
                                 <span>🏛️ {fetchedAssets.locationName} ({fetchedAssets.city})</span>
-                                <span className="text-stone-500">{fetchedAssets.historicalFigure}</span>
+                                <span className="text-stone-500 truncate max-w-[180px]">{fetchedAssets.historicalFigure}</span>
                             </div>
                             <p className="text-stone-600 leading-relaxed text-[11px]">
                                 {fetchedAssets.summaryExtract || fetchedAssets.visionLandscape}
@@ -476,10 +508,12 @@ export default function MomoVideoPanel() {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="video/*,image/*"
+                            accept="video/*,image/*,.mp4,.mov,.webm,.jpg,.jpeg,.png,.webp,.m4v,.MOV,.MP4,.JPG,.PNG"
                             onChange={(e) => {
                                 if (e.target.files && e.target.files.length > 0) {
-                                    void handleFileUpload(e.target.files[0]);
+                                    const selectedFile = e.target.files[0];
+                                    e.target.value = '';
+                                    void handleFileUpload(selectedFile);
                                 }
                             }}
                             className="hidden"
@@ -492,7 +526,7 @@ export default function MomoVideoPanel() {
                                 {uploading ? 'Caricamento in corso…' : 'Trascina qui un tuo video o foto grezzo'}
                             </p>
                             <p className="text-[11px] text-stone-500">
-                                MP4, MOV, JPG, PNG (senza scritte o adesivi pregressi)
+                                Formati supportati: MP4, MOV, WEBM, JPG, PNG (senza scritte o adesivi pregressi)
                             </p>
                         </div>
                     </div>
@@ -500,7 +534,7 @@ export default function MomoVideoPanel() {
                     {uploadedMedia && (
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 flex items-center justify-between text-xs text-emerald-900">
                             <div className="flex items-center gap-2 overflow-hidden">
-                                <span className="font-bold">✓ {uploadedMedia.type === 'video' ? '🎬' : '🖼️'}</span>
+                                <span className="font-bold">✓ {uploadedMedia.type === 'video' ? '🎬 Video' : '🖼️ Foto'}</span>
                                 <span className="truncate font-medium">{uploadedMedia.name}</span>
                                 <span className="text-[10px] text-emerald-700 shrink-0">
                                     ({Math.round(uploadedMedia.size / 1024)} KB)

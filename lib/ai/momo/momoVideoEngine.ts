@@ -84,6 +84,58 @@ function slugify(s: string): string {
         .slice(0, 48);
 }
 
+function getTodayDateString(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+export function computeMomoRenderPath(
+    rawSlug: string,
+    ext = 'mp4'
+): { relativePath: string; filename: string; srtRelativePath: string } {
+    const dateStr = getTodayDateString();
+    const cleanSlug = slugify(rawSlug) || 'cimitero_storico';
+    const baseDir = '/media/social/momo/renders';
+    const absDir = path.join(process.cwd(), 'public', 'media', 'social', 'momo', 'renders');
+
+    let seq = 1;
+    if (process.platform === 'darwin' && !process.env.VERCEL) {
+        try {
+            if (!fs.existsSync(absDir)) {
+                fs.mkdirSync(absDir, { recursive: true });
+            }
+            while (seq < 1000) {
+                const pad = String(seq).padStart(2, '0');
+                const candidate = `${cleanSlug}_${dateStr}_${pad}.${ext}`;
+                if (!fs.existsSync(path.join(absDir, candidate))) {
+                    const filename = candidate;
+                    const srtFilename = `${cleanSlug}_${dateStr}_${pad}.srt`;
+                    return {
+                        relativePath: `${baseDir}/${filename}`,
+                        filename,
+                        srtRelativePath: `${baseDir}/${srtFilename}`,
+                    };
+                }
+                seq++;
+            }
+        } catch (e) {
+            console.warn('[MOMO VideoEngine] Path sequence check error:', e);
+        }
+    }
+
+    const pad = String(seq).padStart(2, '0');
+    const filename = `${cleanSlug}_${dateStr}_${pad}.${ext}`;
+    const srtFilename = `${cleanSlug}_${dateStr}_${pad}.srt`;
+    return {
+        relativePath: `${baseDir}/${filename}`,
+        filename,
+        srtRelativePath: `${baseDir}/${srtFilename}`,
+    };
+}
+
 export function buildSubtitleCues(script: MomoScript): MomoSubtitleCue[] {
     return [
         {
@@ -158,6 +210,17 @@ export async function executeMomoSwiftRender(
         console.log('[MOMO VideoEngine] Executing Swift Renderer:', cmd);
         const { stdout, stderr } = await execPromise(cmd, { cwd: process.cwd() });
         console.log('[MOMO VideoEngine] Swift output:', stdout || stderr);
+
+        // Cattura l'output path esatto in caso di incremento progressivo da parte di Swift
+        const match = (stdout || '').match(/Output file:\s*([^\r\n]+)/i);
+        if (match && match[1]) {
+            const finalAbs = match[1].trim();
+            if (finalAbs.includes('/public/')) {
+                const rel = finalAbs.substring(finalAbs.indexOf('/public/') + 7);
+                plan.videoRelativePath = rel.startsWith('/') ? rel : `/${rel}`;
+                plan.previewUrl = plan.videoRelativePath;
+            }
+        }
 
         return { ok: true, outputUrl: plan.videoRelativePath };
     } catch (err) {
@@ -240,14 +303,16 @@ export async function planMomoVideoRenderAsync(
         rawFootagePath = '/media/social/momo/raw/cimitero_lago_como_panoramica_real.mp4';
     }
 
-    const videoRelativePath = '/media/social/momo/test_momo_real_reel.mp4';
-    const srtRelativePath = '/media/social/momo/test_momo_real_reel.srt';
+    // Risoluzione progressiva percorso video & srt: [slug]_[YYYY-MM-DD]_[seq].mp4
+    const { relativePath: videoRelativePath, srtRelativePath } = computeMomoRenderPath(locationInput.id);
 
     // Salva file .srt
     try {
         const srtContent = toSrt(subtitles);
         const srtAbs = path.join(process.cwd(), 'public', srtRelativePath);
         if (process.platform === 'darwin' && !process.env.VERCEL) {
+            const parentDir = path.dirname(srtAbs);
+            if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
             fs.writeFileSync(srtAbs, srtContent, 'utf-8');
         }
     } catch (e) {
@@ -332,8 +397,7 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
         ? '/media/social/momo/raw/cimitero_campagna_camminata_pov_real.mp4'
         : '/media/social/momo/raw/cimitero_lago_como_panoramica_real.mp4';
 
-    const videoRelativePath = '/media/social/momo/test_momo_real_reel.mp4';
-    const srtRelativePath = '/media/social/momo/test_momo_real_reel.srt';
+    const { relativePath: videoRelativePath, srtRelativePath } = computeMomoRenderPath(locationInput.id);
 
     return {
         status: 'RENDERED_READY_FOR_PUBLISH',

@@ -73,11 +73,44 @@ export default function MomoVideoPanel() {
     const [publishNote, setPublishNote] = useState<string | null>(null);
     const [copiedCaption, setCopiedCaption] = useState(false);
     const [copiedCli, setCopiedCli] = useState(false);
+    const [renderHistory, setRenderHistory] = useState<Array<{
+        url: string;
+        filename: string;
+        location: string;
+        timestamp: string;
+    }>>([]);
 
-    // Generazione comando CLI per Mac
+    // Helpers per nomenclatura progressiva: [slug]_[YYYY-MM-DD]_[seq].mp4
+    const currentSlug = (() => {
+        const raw = fetchedAssets?.locationName || locationQuery || 'cimitero_storico';
+        return raw
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/\p{M}/gu, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 45) || 'cimitero_storico';
+    })();
+
+    const todayDateStr = (() => {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    })();
+
+    const targetOutputRelativePath = `public/media/social/momo/renders/${currentSlug}_${todayDateStr}_01.mp4`;
+    const currentFileName = plan?.videoRelativePath?.split('/').pop() || `${currentSlug}_${todayDateStr}_01.mp4`;
+    const currentSrtFileName = currentFileName.replace(/\.mp4$/i, '.srt');
+
+    // Generazione comando CLI per Mac con nomenclatura progressiva
     const macCliCommand = (() => {
         const hook = (plan?.script.hookQuestion || customHook.trim() || 'Ci sono luoghi dove la bellezza del paesaggio incontra la pace eterna.').replace(/"/g, '\\"');
-        const out = 'public/media/social/momo/test_momo_real_reel.mp4';
+        const out = plan?.videoRelativePath?.startsWith('/')
+            ? `public${plan.videoRelativePath}`
+            : targetOutputRelativePath;
+
         if (uploadedMedia?.type === 'video') {
             return `swift scripts/render-momo-real-reel.swift --video "${uploadedMedia.path}" --hook "${hook}" --output "${out}"`;
         }
@@ -300,6 +333,19 @@ export default function MomoVideoPanel() {
             setPlan(data.plan);
             if (data.plan.fetchedAssets) {
                 setFetchedAssets(data.plan.fetchedAssets);
+            }
+            if (data.plan.videoRelativePath) {
+                const url = data.plan.videoRelativePath;
+                const fn = url.split('/').pop() || `${currentSlug}_${todayDateStr}_01.mp4`;
+                setRenderHistory((prev) => {
+                    const item = {
+                        url,
+                        filename: fn,
+                        location: data.plan.query || locationQuery,
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    };
+                    return [item, ...prev.filter((p) => p.url !== url)].slice(0, 6);
+                });
             }
             setRenderStep('Render completato con successo!');
         } catch (e) {
@@ -786,16 +832,16 @@ export default function MomoVideoPanel() {
                     {plan?.videoRelativePath && (
                         <a
                             href={plan.videoRelativePath}
-                            download="test_momo_real_reel.mp4"
+                            download={currentFileName}
                             className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5 shadow-xs"
                         >
-                            📥 Scarica MP4
+                            📥 Scarica {currentFileName.endsWith('.mp4') ? currentFileName : `${currentFileName}.mp4`}
                         </a>
                     )}
                     {plan?.srtRelativePath && (
                         <a
                             href={plan.srtRelativePath}
-                            download="test_momo_real_reel.srt"
+                            download={currentSrtFileName}
                             className="rounded-xl border border-stone-300 bg-white px-3.5 py-3 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5 shadow-xs"
                         >
                             📄 .SRT Sottotitoli
@@ -827,32 +873,70 @@ export default function MomoVideoPanel() {
             {plan && (
                 <div className="grid gap-6 md:grid-cols-2 pt-2 border-t border-stone-200">
                     {/* Colonna Sinistra: Player Video 9:16 */}
-                    <div className="rounded-2xl border border-stone-800 bg-black aspect-[9/16] max-h-[580px] flex flex-col items-center justify-center text-center overflow-hidden shadow-lg relative mx-auto w-full max-w-[340px]">
-                        {plan.videoRelativePath ? (
-                            <video
-                                key={plan.videoRelativePath}
-                                src={plan.videoRelativePath}
-                                controls
-                                autoPlay
-                                muted
-                                playsInline
-                                loop
-                                className="w-full h-full object-contain"
-                            />
-                        ) : plan.status === 'RENDERED_READY_FOR_PUBLISH' ? (
-                            <div className="p-4 space-y-2">
-                                <p className="text-stone-300 text-xs uppercase tracking-widest">
-                                    Anteprima video · {plan.width}×{plan.height}
-                                </p>
-                                <p className="text-white text-sm font-medium px-2">
-                                    {plan.socialMetadata.title}
-                                </p>
-                                <p className="text-stone-400 text-xs mt-2">
-                                    Output: {plan.videoRelativePath}
-                                </p>
+                    <div className="space-y-3 mx-auto w-full max-w-[340px]">
+                        <div className="rounded-2xl border border-stone-800 bg-black aspect-[9/16] max-h-[580px] flex flex-col items-center justify-center text-center overflow-hidden shadow-lg relative w-full">
+                            {/* Badge Nome File Video in Riproduzione */}
+                            <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-xs text-white text-[10px] font-mono font-medium px-2.5 py-1 rounded-full border border-white/20 shadow-xs flex items-center gap-1.5 z-10 max-w-[90%]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
+                                <span className="truncate">{currentFileName}</span>
                             </div>
-                        ) : (
-                            <p className="text-stone-400 text-sm">Piano in preparazione…</p>
+
+                            {plan.videoRelativePath ? (
+                                <video
+                                    key={plan.videoRelativePath}
+                                    src={plan.videoRelativePath}
+                                    controls
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    loop
+                                    className="w-full h-full object-contain"
+                                />
+                            ) : plan.status === 'RENDERED_READY_FOR_PUBLISH' ? (
+                                <div className="p-4 space-y-2">
+                                    <p className="text-stone-300 text-xs uppercase tracking-widest">
+                                        Anteprima video · {plan.width}×{plan.height}
+                                    </p>
+                                    <p className="text-white text-sm font-medium px-2">
+                                        {plan.socialMetadata.title}
+                                    </p>
+                                    <p className="text-stone-400 text-xs mt-2">
+                                        Output: {plan.videoRelativePath}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-stone-400 text-sm">Piano in preparazione…</p>
+                            )}
+                        </div>
+
+                        {/* Cronologia / Switcher Ultimi Reel Generati */}
+                        {renderHistory.length > 1 && (
+                            <div className="rounded-xl border border-stone-200 bg-stone-50 p-2.5 space-y-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
+                                    🎞️ Cronologia Reel Generati:
+                                </span>
+                                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                                    {renderHistory.map((item) => (
+                                        <button
+                                            key={item.url}
+                                            type="button"
+                                            onClick={() => {
+                                                if (plan) {
+                                                    setPlan({ ...plan, videoRelativePath: item.url, previewUrl: item.url });
+                                                }
+                                            }}
+                                            className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-colors flex items-center gap-1 ${
+                                                plan.videoRelativePath === item.url
+                                                    ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                                                    : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200'
+                                            }`}
+                                        >
+                                            <span>🎬 {item.filename}</span>
+                                            <span className="opacity-60 text-[9px]">({item.timestamp})</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -896,11 +980,15 @@ export default function MomoVideoPanel() {
                                         {copiedCli ? '✅ Copiato!' : '📋 Copia Comando'}
                                     </button>
                                 </div>
-                                <div className="bg-black/60 rounded-lg p-2.5 font-mono text-[10px] text-emerald-400 break-all leading-relaxed select-all">
+                                <div className="bg-stone-800/80 rounded-lg p-2 text-xs flex items-center justify-between gap-2 border border-stone-700/50">
+                                    <span className="text-stone-400 text-[11px]">Nome file previsto:</span>
+                                    <span className="font-mono text-emerald-400 text-[11px] font-bold truncate">{currentFileName}</span>
+                                </div>
+                                <div className="bg-black/60 rounded-lg p-2.5 font-mono text-[10px] text-emerald-400 break-all leading-relaxed select-all border border-stone-800">
                                     {macCliCommand}
                                 </div>
-                                <p className="text-[10px] text-stone-400">
-                                    Esegui nel terminale per renderizzare istantaneamente in locale su macOS con AVFoundation Ken Burns.
+                                <p className="text-[10px] text-stone-400 leading-snug">
+                                    Esegui nel terminale per renderizzare in locale con AVFoundation. Se il file esiste già sul Mac, lo script calcolerà automaticamente il progressivo successivo (_02, _03...) senza sovrascrivere.
                                 </p>
                             </div>
 

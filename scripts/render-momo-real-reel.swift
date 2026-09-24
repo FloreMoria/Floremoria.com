@@ -15,7 +15,7 @@ let currentDir = fm.currentDirectoryPath
 var imageInputs: [String] = []
 var rawVideoPath: String? = nil
 var audioPath = "\(currentDir)/public/media/social/momo/audio/minimal_piano_einaudi_mood_cc0.wav"
-var outputPath = "\(currentDir)/public/media/social/momo/test_momo_real_reel.mp4"
+var userSpecifiedOutput: String? = nil
 var hookQuestion = "Ci sono luoghi dove la bellezza del paesaggio incontra la pace eterna."
 var customDuration: Double? = nil
 
@@ -34,7 +34,7 @@ while i < args.count {
         audioPath = args[i + 1]
         i += 2
     } else if args[i] == "--output" && i + 1 < args.count {
-        outputPath = args[i + 1]
+        userSpecifiedOutput = args[i + 1]
         i += 2
     } else if args[i] == "--hook" && i + 1 < args.count {
         hookQuestion = args[i + 1]
@@ -47,12 +47,71 @@ while i < args.count {
     }
 }
 
-// Ensure output directory exists
-let outURL = URL(fileURLWithPath: outputPath.hasPrefix("/") ? outputPath : "\(currentDir)/\(outputPath)")
-let outDir = outURL.deletingLastPathComponent().path
-if !fm.fileExists(atPath: outDir) {
-    try? fm.createDirectory(atPath: outDir, withIntermediateDirectories: true, attributes: nil)
+// --------------------------------------------------------------------------
+// Progressive Output Path Resolution ([slug]_[YYYY-MM-DD]_[progressivo].mp4)
+// --------------------------------------------------------------------------
+func resolveUniqueOutputPath(requestedPath: String?) -> String {
+    let defaultRendersDir = "\(currentDir)/public/media/social/momo/renders"
+    if !fm.fileExists(atPath: defaultRendersDir) {
+        try? fm.createDirectory(atPath: defaultRendersDir, withIntermediateDirectories: true, attributes: nil)
+    }
+    
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+    let todayStr = dateFormatter.string(from: Date())
+    
+    let rawPath: String
+    if let req = requestedPath, !req.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        rawPath = req.hasPrefix("/") ? req : "\(currentDir)/\(req)"
+    } else {
+        rawPath = "\(defaultRendersDir)/cimitero_storico_\(todayStr)_01.mp4"
+    }
+    
+    let fileURL = URL(fileURLWithPath: rawPath)
+    let parentDir = fileURL.deletingLastPathComponent().path
+    if !fm.fileExists(atPath: parentDir) {
+        try? fm.createDirectory(atPath: parentDir, withIntermediateDirectories: true, attributes: nil)
+    }
+    
+    // If the requested exact path does not exist yet on disk, return it directly
+    if !fm.fileExists(atPath: rawPath) {
+        return rawPath
+    }
+    
+    // If it already exists, compute next available progressive index (_01, _02, _03...)
+    let ext = fileURL.pathExtension.isEmpty ? "mp4" : fileURL.pathExtension
+    let filenameWithoutExt = fileURL.deletingPathExtension().lastPathComponent
+    
+    // Check if filename ends with _XX (e.g. _01, _02, _99)
+    let regex = try? NSRegularExpression(pattern: "^(.*)_(\\d{2,3})$", options: [])
+    var prefix = filenameWithoutExt
+    var startSeq = 1
+    
+    if let match = regex?.firstMatch(in: filenameWithoutExt, options: [], range: NSRange(location: 0, length: filenameWithoutExt.utf16.count)) {
+        if let prefixRange = Range(match.range(at: 1), in: filenameWithoutExt),
+           let numRange = Range(match.range(at: 2), in: filenameWithoutExt) {
+            prefix = String(filenameWithoutExt[prefixRange])
+            startSeq = (Int(filenameWithoutExt[numRange]) ?? 1) + 1
+        }
+    }
+    
+    var seq = startSeq
+    while seq < 1000 {
+        let pad = String(format: "%02d", seq)
+        let candidate = "\(parentDir)/\(prefix)_\(pad).\(ext)"
+        if !fm.fileExists(atPath: candidate) {
+            return candidate
+        }
+        seq += 1
+    }
+    
+    return "\(parentDir)/\(prefix)_\(UUID().uuidString.prefix(6)).\(ext)"
 }
+
+let outputPath = resolveUniqueOutputPath(requestedPath: userSpecifiedOutput)
+let outputFilename = URL(fileURLWithPath: outputPath).lastPathComponent
+print("Target Output: \(outputPath)")
+print("Filename:      \(outputFilename)")
 
 // Fallback audio check
 if !fm.fileExists(atPath: audioPath) {
@@ -397,10 +456,6 @@ if !imageInputs.isEmpty || rawVideoPath == nil {
             audioMix.inputParameters = [params]
         }
         
-        if fm.fileExists(atPath: outputPath) {
-            try? fm.removeItem(atPath: outputPath)
-        }
-        
         guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
             fatalError("Failed export session")
         }
@@ -419,8 +474,9 @@ if !imageInputs.isEmpty || rawVideoPath == nil {
         
         if exportSession.status == .completed {
             print("=========================================================")
-            print("🎉 MOMO KEN BURNS SUCCESS: Rendered MP4 at:")
-            print("   \(outputPath)")
+            print("🎉 MOMO EXPORT SUCCESS!")
+            print("Output file: \(outputPath)")
+            print("Filename:    \(outputFilename)")
             print("=========================================================")
             exit(0)
         } else {
@@ -554,10 +610,6 @@ if let audioTrack = composition.tracks(withMediaType: .audio).first {
 }
 
 // 7. Export Session
-if fm.fileExists(atPath: outputPath) {
-    try? fm.removeItem(atPath: outputPath)
-}
-
 guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
     fatalError("Cannot create AVAssetExportSession")
 }
@@ -589,7 +641,9 @@ semaphore.wait()
 
 if exportSession.status == .completed {
     print("=========================================================")
-    print("🎉 SUCCESS: Rendered real footage reel at \(outputPath)")
+    print("🎉 MOMO EXPORT SUCCESS!")
+    print("Output file: \(outputPath)")
+    print("Filename:    \(outputFilename)")
     print("=========================================================")
     exit(0)
 } else {

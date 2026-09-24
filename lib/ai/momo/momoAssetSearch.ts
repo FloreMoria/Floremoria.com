@@ -50,7 +50,9 @@ function buildSearchCandidates(rawQuery: string): string[] {
         candidates.push(`${simplified} cimitero`);
         candidates.push(simplified);
         candidates.push(`${simplified} monumento`);
-        candidates.push(`${simplified} chiesa`);
+        candidates.push(`${simplified} scultura`);
+        candidates.push(`${simplified} veduta`);
+        candidates.push(`${simplified} chiostro`);
     }
 
     // Estrai comune o città se presente dopo la virgola o trattino
@@ -60,6 +62,7 @@ function buildSearchCandidates(rawQuery: string): string[] {
         const mainPart = parts[0].trim();
         if (cityPart) {
             candidates.push(`${mainPart} ${cityPart}`);
+            candidates.push(`Cimitero ${cityPart}`);
             candidates.push(cityPart);
         }
     }
@@ -69,7 +72,7 @@ function buildSearchCandidates(rawQuery: string): string[] {
 
 /**
  * Ricerca fotografie storiche autentiche ad alta risoluzione (JPG/PNG)
- * restituendo direttamente gli URL HTTPS remoti da Wikimedia Commons e Wikipedia.
+ * restituendo direttamente gli URL HTTPS remoti da Wikimedia Commons e Wikipedia (15-20 asset).
  */
 export async function searchAndFetchMomoAssets(
     query: string
@@ -80,6 +83,7 @@ export async function searchAndFetchMomoAssets(
     }
 
     const slug = slugify(cleanQuery);
+    const MAX_IMAGES = 20;
 
     // 1. Controlla catalogo locale pre-certificato
     const localMatch =
@@ -95,11 +99,11 @@ export async function searchAndFetchMomoAssets(
 
     // 2. Esegui ricerca a cascata
     for (const candidate of searchCandidates) {
-        if (remoteImageUrls.length >= 4) break;
+        if (remoteImageUrls.length >= MAX_IMAGES) break;
 
         // A) Cerca contesto e immagini da Wikipedia
         try {
-            const wikiSearchUrl = `https://it.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrlimit=2&prop=pageimages|extracts|info&inprop=url&piprop=original|thumbnail&pithumbsize=1920&exintro=1&explaintext=1`;
+            const wikiSearchUrl = `https://it.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrlimit=5&prop=pageimages|extracts|info&inprop=url&piprop=original|thumbnail&pithumbsize=1920&exintro=1&explaintext=1`;
             const wikiRes = await fetch(wikiSearchUrl, {
                 headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
             });
@@ -119,6 +123,7 @@ export async function searchAndFetchMomoAssets(
                         wikiImgUrl &&
                         !wikiImgUrl.includes('.svg') &&
                         !wikiImgUrl.includes('.tif') &&
+                        !wikiImgUrl.includes('.pdf') &&
                         !remoteImageUrls.includes(wikiImgUrl)
                     ) {
                         remoteImageUrls.push(wikiImgUrl);
@@ -132,7 +137,7 @@ export async function searchAndFetchMomoAssets(
 
         // B) Cerca fotografie ad alta risoluzione su Wikimedia Commons
         try {
-            const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1920`;
+            const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(candidate)}&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1920`;
             const commonsRes = await fetch(commonsUrl, {
                 headers: { 'User-Agent': 'FloreMoria/1.0 (staff.floremoria@gmail.com)' },
             });
@@ -142,20 +147,29 @@ export async function searchAndFetchMomoAssets(
                 const pages = Object.values(commonsData.query?.pages || {}) as any[];
 
                 for (const page of pages) {
-                    if (remoteImageUrls.length >= 4) break;
+                    if (remoteImageUrls.length >= MAX_IMAGES) break;
                     const info = page.imageinfo?.[0];
                     if (!info) continue;
                     const imgUrl = info.thumburl || info.url;
                     if (!imgUrl) continue;
 
                     const titleLow = (page.title || '').toLowerCase();
+                    const mime = (info.mime || '').toLowerCase();
                     if (
                         titleLow.includes('.svg') ||
+                        titleLow.includes('.pdf') ||
+                        titleLow.includes('.tif') ||
                         titleLow.includes('map') ||
                         titleLow.includes('mappa') ||
                         titleLow.includes('planimetria') ||
                         titleLow.includes('icon') ||
-                        titleLow.includes('flag')
+                        titleLow.includes('flag') ||
+                        titleLow.includes('stemm') ||
+                        titleLow.includes('stemma') ||
+                        titleLow.includes('logo') ||
+                        mime.includes('svg') ||
+                        mime.includes('pdf') ||
+                        mime.includes('audio')
                     ) {
                         continue;
                     }

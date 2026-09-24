@@ -72,6 +72,27 @@ export default function MomoVideoPanel() {
     const [error, setError] = useState<string | null>(null);
     const [publishNote, setPublishNote] = useState<string | null>(null);
     const [copiedCaption, setCopiedCaption] = useState(false);
+    const [copiedCli, setCopiedCli] = useState(false);
+
+    // Generazione comando CLI per Mac
+    const macCliCommand = (() => {
+        const hook = (plan?.script.hookQuestion || customHook.trim() || 'Ci sono luoghi dove la bellezza del paesaggio incontra la pace eterna.').replace(/"/g, '\\"');
+        const out = 'public/media/social/momo/test_momo_real_reel.mp4';
+        if (uploadedMedia?.type === 'video') {
+            return `swift scripts/render-momo-real-reel.swift --video "${uploadedMedia.path}" --hook "${hook}" --output "${out}"`;
+        }
+        const imgs = selectedImages.length > 0 ? selectedImages : (fetchedAssets?.imagePaths || []);
+        if (imgs.length > 0) {
+            return `swift scripts/render-momo-real-reel.swift --images "${imgs.join(',')}" --hook "${hook}" --output "${out}"`;
+        }
+        return `swift scripts/render-momo-real-reel.swift --hook "${hook}" --output "${out}"`;
+    })();
+
+    const copyCliCommand = () => {
+        navigator.clipboard.writeText(macCliCommand);
+        setCopiedCli(true);
+        setTimeout(() => setCopiedCli(false), 2500);
+    };
 
     // Caricamento catalogo iniziale e primo reel di anteprima
     useEffect(() => {
@@ -227,9 +248,26 @@ export default function MomoVideoPanel() {
     }, []);
 
     const toggleImageSelection = (path: string) => {
-        setSelectedImages((prev) =>
-            prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
-        );
+        setSelectedImages((prev) => {
+            if (prev.includes(path)) {
+                return prev.filter((p) => p !== path);
+            }
+            if (prev.length >= 6) {
+                // Sostituisci l'ultima se già a 6
+                return [...prev.slice(0, 5), path];
+            }
+            return [...prev, path];
+        });
+    };
+
+    const selectPresetImages = (count: number) => {
+        if (!fetchedAssets?.imagePaths) return;
+        const valid = fetchedAssets.imagePaths.filter((p) => !/\.(mp4|mov|webm|m4v)$/i.test(p));
+        setSelectedImages(valid.slice(0, Math.min(count, 6)));
+    };
+
+    const clearSelectedImages = () => {
+        setSelectedImages([]);
     };
 
     // Generazione e rendering del Reel con Ken Burns / footage reale
@@ -424,28 +462,61 @@ export default function MomoVideoPanel() {
             <div className="grid gap-4 md:grid-cols-2">
                 {/* Scheda Foto Storiche Trovate da Wikimedia */}
                 <div className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <span className="text-xs font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5">
-                            <span>📸 Fotografie Autentiche HD ({selectedImages.length} selezionate)</span>
+                            <span>📸 Fotografie Autentiche HD ({selectedImages.length} di max 6)</span>
                         </span>
-                        {fetchedAssets && (
-                            <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
-                                {fetchedAssets.fallbackUsed ? 'Archivio Territoriale CC' : 'Wikimedia Commons CC'}
-                            </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                            {fetchedAssets && (
+                                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                                    {fetchedAssets.fallbackUsed ? 'Archivio Territoriale CC' : `Wikimedia Commons CC (${fetchedAssets.imagePaths.length})`}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {fetchedAssets?.imagePaths && fetchedAssets.imagePaths.length > 0 ? (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-2.5">
+                            {/* Preset Selection Toolbar */}
+                            <div className="flex items-center justify-between text-[11px] bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">
+                                <span className="text-stone-500 font-medium">Selezione rapida montaggio:</span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => selectPresetImages(4)}
+                                        className="px-2 py-0.5 rounded bg-white hover:bg-stone-100 border border-stone-200 font-semibold text-stone-700 transition-colors"
+                                    >
+                                        Prime 4
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => selectPresetImages(6)}
+                                        className="px-2 py-0.5 rounded bg-white hover:bg-stone-100 border border-stone-200 font-semibold text-stone-700 transition-colors"
+                                    >
+                                        Prime 6
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={clearSelectedImages}
+                                        className="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-500 font-semibold transition-colors"
+                                    >
+                                        Azzera
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Responsive Image Grid (Up to 20 images) */}
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[340px] overflow-y-auto pr-1">
                                 {fetchedAssets.imagePaths.map((img: string, idx: number) => {
-                                    const selected = selectedImages.includes(img);
+                                    const selectedIndex = selectedImages.indexOf(img);
+                                    const selected = selectedIndex !== -1;
                                     const isVideo = /\.(mp4|mov|webm|m4v)$/i.test(img);
                                     return (
                                         <button
                                             key={img}
                                             type="button"
                                             onClick={() => toggleImageSelection(img)}
+                                            title={`Foto #${idx + 1}${selected ? ` (Ordine video: ${selectedIndex + 1})` : ''}`}
                                             className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all group ${
                                                 selected
                                                     ? 'border-emerald-600 ring-2 ring-emerald-500/30'
@@ -465,20 +536,20 @@ export default function MomoVideoPanel() {
                                                 />
                                             )}
                                             <div
-                                                className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                                className={`absolute top-1 right-1 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs ${
                                                     selected
                                                         ? 'bg-emerald-600 text-white'
                                                         : 'bg-black/60 text-white'
                                                 }`}
                                             >
-                                                {selected ? '✓' : idx + 1}
+                                                {selected ? `#${selectedIndex + 1}` : `+`}
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
                             <p className="text-[11px] text-stone-500">
-                                💡 Clicca sulle immagini per includerle/escluderle dalla sequenza documentaristica Ken Burns.
+                                💡 Clicca per selezionare da 3 a 6 foto. I numeri (#1, #2…) indicano l&apos;ordine esatto nel video Ken Burns.
                             </p>
                         </div>
                     ) : (
@@ -699,6 +770,13 @@ export default function MomoVideoPanel() {
                     </button>
                     <button
                         type="button"
+                        onClick={copyCliCommand}
+                        className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5 shadow-xs"
+                    >
+                        {copiedCli ? '✅ Comando Copiato!' : '📋 Copia Comando Mac'}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => void publish()}
                         disabled={!plan || publishing || channels.length === 0}
                         className="rounded-xl border border-rose-500 bg-rose-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 hover:bg-rose-700 transition-colors shadow-sm inline-flex items-center gap-1.5"
@@ -731,6 +809,19 @@ export default function MomoVideoPanel() {
                     ✅ {publishNote}
                 </p>
             )}
+
+            {/* Banner Architettura Ibrida */}
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 text-xs text-indigo-950 flex items-start gap-2.5">
+                <span className="text-base">⚡</span>
+                <div className="space-y-0.5">
+                    <p className="font-bold text-[11px] uppercase tracking-wider text-indigo-900">
+                        Architettura Ibrida Mac + Cloud (Zero Carico Vercel)
+                    </p>
+                    <p className="text-[11px] text-indigo-800/90 leading-relaxed">
+                        La ricerca asset da 15-20 fonti aperte e la scrittura editoriale operano istantaneamente via API cloud. Il rendering hardware 1080×1920 con effetto Ken Burns e adesivo Instagram viene eseguito sul Mac con AVFoundation (oppure lanciando il comando copiato).
+                    </p>
+                </div>
+            </div>
 
             {/* SEZIONE 5: Anteprima Video Verticale 9:16 + Sticker Nativo + Didascalia Anti-Spoiler */}
             {plan && (
@@ -789,6 +880,28 @@ export default function MomoVideoPanel() {
                                         <span className="font-semibold text-stone-800">Colonna Sonora:</span> {plan.audio.music.title} {plan.audio.voice ? `+ Voce (${plan.audio.voice.label})` : '(Solo pianoforte)'}
                                     </p>
                                 </div>
+                            </div>
+
+                            {/* Card Comando CLI Mac */}
+                            <div className="bg-stone-900 text-stone-100 rounded-xl p-3.5 border border-stone-800 space-y-2 shadow-xs">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-300 flex items-center gap-1.5">
+                                        <span>🍏 Comando Mac AVFoundation</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={copyCliCommand}
+                                        className="text-[11px] font-semibold text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
+                                    >
+                                        {copiedCli ? '✅ Copiato!' : '📋 Copia Comando'}
+                                    </button>
+                                </div>
+                                <div className="bg-black/60 rounded-lg p-2.5 font-mono text-[10px] text-emerald-400 break-all leading-relaxed select-all">
+                                    {macCliCommand}
+                                </div>
+                                <p className="text-[10px] text-stone-400">
+                                    Esegui nel terminale per renderizzare istantaneamente in locale su macOS con AVFoundation Ken Burns.
+                                </p>
                             </div>
 
                             {/* Hook Instagram Nativo (Badge Sticker) */}

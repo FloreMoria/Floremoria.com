@@ -48,6 +48,7 @@
     "partner:key": "tsx scripts/generate-partner-api-key.ts",
     "social:force-publish-today": "tsx scripts/force-publish-today.ts",
     "social:sync-campaign-media": "tsx scripts/maintenance/sync-campaign-media.ts",
+    "momo:render": "swift scripts/render-momo-real-reel.swift",
     "auth:backfill-users": "tsx scripts/backfill-users-from-orders.ts",
     "auth:migrate-elevated-emails": "tsx scripts/migrate-elevated-user-emails.ts",
     "verify-super-admin": "tsx scripts/verify-super-admin.ts",

@@ -134,15 +134,20 @@ export async function executeMomoSwiftRender(
 
         let cmd: string;
         if (plan.images && plan.images.length > 0) {
-            const imgAbsList = plan.images
-                .map((p) => (p.startsWith('/') ? path.join(process.cwd(), 'public', p) : p))
-                .filter((p) => fs.existsSync(p));
-            if (imgAbsList.length === 0) {
+            const imgResolvedList = plan.images
+                .map((p) => {
+                    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+                    return p.startsWith('/') ? path.join(process.cwd(), 'public', p) : p;
+                })
+                .filter((p) => p.startsWith('http://') || p.startsWith('https://') || fs.existsSync(p));
+            if (imgResolvedList.length === 0) {
                 return { ok: false, outputUrl: plan.videoRelativePath, error: 'Nessuna immagine valida trovata' };
             }
-            cmd = `swift "${scriptPath}" --images "${imgAbsList.join(',')}" --audio "${audioAbs}" --hook "${cleanHook}" --output "${outAbs}" --duration ${plan.script.durationSeconds}`;
+            cmd = `swift "${scriptPath}" --images "${imgResolvedList.join(',')}" --audio "${audioAbs}" --hook "${cleanHook}" --output "${outAbs}" --duration ${plan.script.durationSeconds}`;
         } else if (plan.rawFootagePath) {
-            const vidAbs = plan.rawFootagePath.startsWith('/')
+            const vidAbs = plan.rawFootagePath.startsWith('http://') || plan.rawFootagePath.startsWith('https://')
+                ? plan.rawFootagePath
+                : plan.rawFootagePath.startsWith('/')
                 ? path.join(process.cwd(), 'public', plan.rawFootagePath)
                 : plan.rawFootagePath;
             cmd = `swift "${scriptPath}" --video "${vidAbs}" --audio "${audioAbs}" --hook "${cleanHook}" --output "${outAbs}" --duration ${plan.script.durationSeconds}`;

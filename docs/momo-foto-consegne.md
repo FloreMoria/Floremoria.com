@@ -3,7 +3,8 @@
 > **Aggiornato:** 2026-09-24 (decisioni titolare)  
 > **Stato:** documentazione + verifiche sola lettura. **Nessuno sviluppo** senza OK.  
 > **Nessuna Fase 2 contabilità** senza OK.  
-> **Bozza testi legali:** `docs/momo-foto-consegne-testi-legali-bozza.md` (da far validare a Iubenda/avvocato).
+> **Bozza testi legali:** `docs/momo-foto-consegne-testi-legali-bozza.md` (da far validare a Iubenda/avvocato).  
+> **LIA (art. 6.1.f):** `docs/momo-foto-consegne-lia.md`.
 
 ---
 
@@ -22,6 +23,7 @@
 
 - Solo foto **«dopo»** la consegna.
 - **Senza persone** riconoscibili.
+- **Regola foto pregresse (Stock Storico):** si utilizzano **esclusivamente** le foto di ordini effettuati **DOPO** la pubblicazione della nuova informativa privacy (in vigore dal **24 Settembre 2026**). Tutte le foto di ordini anteriori a tale data rimangono ad uso strettamente contrattuale/rendicontazione e non possono essere inserite in coda né pubblicate.
 
 ### 1.3 Pubblicazione
 
@@ -37,13 +39,13 @@
 
 ### 1.5 Carosello homepage — foto consegne (decisione 2026-09-24)
 
-- Le foto **attuali** già in homepage **restano**.
-- Le **NUOVE** foto di consegna entrano nel carosello **solo dopo**:
+- **Freeze (finché non esiste la coda di approvazione):** solo foto di consegne fino al **24/09/2026** (già controllate dal titolare). **Nessuna nuova foto entra in automatico.**
+- Quando esisterà la coda, le **NUOVE** foto entrano **solo dopo**:
   1. anonimizzazione con le regole Momo (§2);
-  2. **approvazione personale del titolare** (stesso standard dei social).
-- **Nessuna** foto entra in automatico.
-- Traccia obbligatoria: chi ha approvato e quando.
-- **Non sviluppare** finché non c’è OK esplicito.
+  2. **approvazione personale del titolare** (stesso standard dei social);
+  3. traccia obbligatoria: chi ha approvato e quando.
+- LIA (legittimo interesse): `docs/momo-foto-consegne-lia.md`.
+- **Data efficacia 24/09/2026:** valida **solo** se il titolare pubblica lo stesso giorno.
 
 ---
 

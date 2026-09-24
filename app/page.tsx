@@ -19,19 +19,32 @@ import {
   FLOREM_DIGITAL_ASSISTANT_NAME,
   FLOREM_HUMAN_OPERATOR_TRIGGER,
 } from '@/lib/floremDigitalAssistant';
+import { HOMEPAGE_CAROUSEL_PROOF_CUTOFF } from '@/lib/deliveryProof/momoPhotoPolicy';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Invia fiori al cimitero in tutta Italia',
   description: 'Consegna fiori sulle tombe e nei cimiteri in Italia tramite fioristi partner. Per ogni servizio riceverai una foto di conferma per rassicurarti.',
 };
 
+/**
+ * Carosello homepage: finché non esiste la coda di approvazione Momo,
+ * mostra solo foto di consegna fino al 24/09/2026 (già controllate).
+ * Nessuna nuova foto entra in automatico.
+ */
 async function loadDeliveryProofPhotos(): Promise<string[]> {
   if (!process.env.DATABASE_URL?.trim()) {
     return [];
   }
   try {
     const proofs = await prisma.deliveryProof.findMany({
-      where: { status: 'COMPLETED', photoAfterUrl: { not: null } },
+      where: {
+        status: 'COMPLETED',
+        photoAfterUrl: { not: null },
+        timestampAfter: { lt: HOMEPAGE_CAROUSEL_PROOF_CUTOFF },
+        order: {
+          marketingPhotosOptOut: false,
+        },
+      },
       orderBy: { timestampAfter: 'desc' },
       take: 3,
       select: { photoAfterUrl: true },

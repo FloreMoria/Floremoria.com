@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { syncSocialReadyProofsForOrder } from '@/lib/deliveryProof/socialProofChannel';
 import { resolveSocialCategoryFromProductSlugs } from '@/lib/marketing/socialProofCopy';
+import { MOMO_PHOTO_POLICY_EFFECTIVE_DATE } from '@/lib/deliveryProof/momoPhotoPolicy';
 
 /**
  * Avvia sanificazione social (canale parallelo) dopo upload foto consegna.
@@ -19,6 +20,8 @@ export async function triggerSocialSanitizationForOrder(
         id: true,
         order: {
           select: {
+            marketingPhotosOptOut: true,
+            createdAt: true,
             items: { select: { product: { select: { category: { select: { slug: true } } } } } },
           },
         },
@@ -27,6 +30,22 @@ export async function triggerSocialSanitizationForOrder(
 
     if (!proof) {
       console.warn(`[Social Proof] Nessun DeliveryProof per ordine ${orderId} — skip.`);
+      return;
+    }
+
+    // 1. Rispetto tassativo opt-out del cliente (Strada A)
+    if (proof.order.marketingPhotosOptOut) {
+      console.log(
+        `[Social Proof] Ordine ${orderId} ha opt-out attivo (marketingPhotosOptOut) — sanificazione e coda Momo bloccate.`
+      );
+      return;
+    }
+
+    // 2. Stock storico: solo ordini dalla data di efficacia informativa in poi
+    if (proof.order.createdAt < MOMO_PHOTO_POLICY_EFFECTIVE_DATE) {
+      console.log(
+        `[Social Proof] Ordine ${orderId} precedente all'informativa privacy (${MOMO_PHOTO_POLICY_EFFECTIVE_DATE.toISOString()}) — non eleggibile per Momo.`
+      );
       return;
     }
 

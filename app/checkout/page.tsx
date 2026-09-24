@@ -127,6 +127,8 @@ export default function CheckoutPage() {
     /** Email azienda partner (handoff API); salvata su Order.partnerNotifyEmail. */
     const [partnerNotifyEmail, setPartnerNotifyEmail] = useState('');
     const [newsletterOptIn, setNewsletterOptIn] = useState(false);
+    /** Rifiuto facoltativo uso foto consegna per marketing/Momo (Strada A - non spuntata di default). */
+    const [marketingPhotosOptOut, setMarketingPhotosOptOut] = useState(false);
     const [discountCodeInput, setDiscountCodeInput] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
     const [discountError, setDiscountError] = useState('');
@@ -568,6 +570,7 @@ export default function CheckoutPage() {
                 ...(partnerNotifyEmail.trim() ? { partnerNotifyEmail: partnerNotifyEmail.trim() } : {}),
                 ...(appliedDiscount?.code ? { discountCode: appliedDiscount.code } : {}),
                 newsletterOptIn,
+                marketingPhotosOptOut,
             };
 
             const res = await fetch('/api/checkout', {
@@ -1087,7 +1090,35 @@ export default function CheckoutPage() {
                                         )}
                                     </div>
                                     <div className="space-y-3 mb-6">
-                                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                                        {/* Opt-out facoltativo foto marketing / Momo (Strada A - non spuntato di default) */}
+                                        <div className="rounded-xl border border-gray-200 bg-white p-3.5 space-y-1">
+                                            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-800 font-medium">
+                                                <input
+                                                    type="checkbox"
+                                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-stone-900 focus:ring-stone-500 cursor-pointer"
+                                                    checked={marketingPhotosOptOut}
+                                                    onChange={(e) => setMarketingPhotosOptOut(e.target.checked)}
+                                                />
+                                                <div>
+                                                    <span className="font-semibold text-gray-900 leading-snug block">
+                                                        Non usate le foto della mia consegna, nemmeno in forma anonima
+                                                    </span>
+                                                    <p className="text-[11px] text-gray-500 font-normal mt-0.5 leading-relaxed">
+                                                        La consegna e la foto di conferma privata restano invariate. Usiamo le foto solo se anonimizzate (solo fiori, senza nomi o dettagli della tomba) e controllate dallo staff.{' '}
+                                                        <a
+                                                            href="/privacy"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-stone-700 underline hover:text-black font-medium"
+                                                        >
+                                                            Privacy Policy
+                                                        </a>
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 className="mt-1 h-4 w-4 rounded border-gray-300 text-fm-cta focus:ring-fm-cta/40"

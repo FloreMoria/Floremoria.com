@@ -53,7 +53,9 @@ export async function POST(request: Request) {
             partnerNotifyEmail,
             discountCode,
             newsletterOptIn,
+            marketingPhotosOptOut: rawMarketingPhotosOptOut,
         } = body;
+        const marketingPhotosOptOut = rawMarketingPhotosOptOut === true;
 
         const formattedDeceasedName = formatDeceasedName(deceasedName);
         const formattedBuyerFullName = formatPersonName(buyerFullName);
@@ -253,6 +255,10 @@ export async function POST(request: Request) {
             const tag = 'PROMEMORIA_CURA_TOMBA_10G:SI';
             additionalInstructions = additionalInstructions ? `${additionalInstructions} | ${tag}` : tag;
         }
+        if (marketingPhotosOptOut) {
+            const tag = 'OPTOUT_FOTO_MARKETING:SI';
+            additionalInstructions = additionalInstructions ? `${additionalInstructions} | ${tag}` : tag;
+        }
 
         const notifyEmail = partnerAssoc.partnerNotifyEmail;
 
@@ -374,6 +380,7 @@ export async function POST(request: Request) {
                             deliveryDate: new Date(deliveryDate),
                             ticketMessage,
                             additionalInstructions,
+                            marketingPhotosOptOut,
                             totalPriceCents: finalTotalCents,
                             partnerId: partnerAssoc.partnerId,
                             agencyId: partnerAssoc.agencyId,

@@ -116,6 +116,11 @@
 Ogni copia anonimizzata entra in coda Momo `PENDING_REVIEW`. Solo dopo approvazione umana è eleggibile per i social. Il cron Pinterest/Meta **non** pubblica asset non approvati.
 
 ### 7.4 Carosello homepage (foto consegne)
-- Foto già in homepage: **restano** (decisione titolare 2026-09-24).
-- **Nuove** foto: solo dopo anonimizzazione (§7.2) **e** approvazione **personale del titolare** (come i social). Nessun ingresso automatico. Audit: chi / quando.
-- Sviluppo carosello gated: non implementare senza OK.
+- **Freeze operativo (finché non esiste la coda di approvazione):** il carosello mostra **solo** foto di consegna con `timestampAfter` fino al **24/09/2026** incluso (già controllate dal titolare). **Nessuna nuova foto entra in automatico.**
+- Quando esisterà la coda: nuove foto solo dopo anonimizzazione (§7.2) **e** approvazione **personale del titolare** (come i social). Audit: chi / quando.
+- LIA: `docs/momo-foto-consegne-lia.md`.
+
+### 7.5 Regola stock storico / pipeline Momo (social)
+- Pipeline Momo / social: eleggibili **solo** ordini dalla data di efficacia informativa in poi (`MOMO_PHOTO_POLICY_EFFECTIVE_DATE`, **24/09/2026** se go-live lo stesso giorno), con opt-out **non** attivo.
+- Ordini antecedenti: solo prova contrattuale — **non** entrano in coda Momo né in usi promozionali nuovi.
+- Carosello: vedi freeze §7.4 (set già controllato ≤ 24/09), distinto dalla pipeline social.

@@ -141,4 +141,7 @@ Allineamento con `docs/momo-foto-consegne.md` (regole §2 + Strada B testi).
 3. Fallback onesto senza numero inventato.  
 4. Verificare contatore = 36 (o valore live Google) e click → Google.
 
-**Non eseguito** in questa sessione.
+**Stato 2026-09-24:** U1–U4 implementati in working tree; env Vercel upsertate. Pubblicazione codice in attesa OK titolare.
+
+### Carosello homepage (decisione titolare — sviluppo futuro)
+Vedi anche `docs/momo-foto-consegne.md` §1.5 e `agents/MOMO_master.md` §7.4: nuove foto solo dopo anonimizzazione Momo + OK personale del titolare; foto attuali restano; nessun ingresso automatico.

@@ -35,6 +35,16 @@
 - Solo citazione generica della rete **a livello di regione** (es. «un fiorista partner FloreMoria in Lombardia»).
 - **Mai** città o paese. Valida per tutti i social.
 
+### 1.5 Carosello homepage — foto consegne (decisione 2026-09-24)
+
+- Le foto **attuali** già in homepage **restano**.
+- Le **NUOVE** foto di consegna entrano nel carosello **solo dopo**:
+  1. anonimizzazione con le regole Momo (§2);
+  2. **approvazione personale del titolare** (stesso standard dei social).
+- **Nessuna** foto entra in automatico.
+- Traccia obbligatoria: chi ha approvato e quando.
+- **Non sviluppare** finché non c’è OK esplicito.
+
 ---
 
 ## 2. Regole di anonimizzazione (tutti i social, senza eccezioni)

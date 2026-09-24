@@ -114,3 +114,8 @@
 
 ### 7.3 Coda «Da approvare»
 Ogni copia anonimizzata entra in coda Momo `PENDING_REVIEW`. Solo dopo approvazione umana è eleggibile per i social. Il cron Pinterest/Meta **non** pubblica asset non approvati.
+
+### 7.4 Carosello homepage (foto consegne)
+- Foto già in homepage: **restano** (decisione titolare 2026-09-24).
+- **Nuove** foto: solo dopo anonimizzazione (§7.2) **e** approvazione **personale del titolare** (come i social). Nessun ingresso automatico. Audit: chi / quando.
+- Sviluppo carosello gated: non implementare senza OK.

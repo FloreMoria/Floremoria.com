@@ -24,7 +24,7 @@
 3. **Cursor:** prompt con **copia-incolla** del punto 1–2 + link o path espliciti.  
 4. **Cursor:** implementa, testa localmente, elenca file modificati e comandi usati.  
 5. **Antigravity:** validazione strategica / messaggio utente / rollout comms se serve.  
-6. **Deploy:** secondo checklist unica (es. `deploy-incremental.sh`); niente deploy “a voce” senza verifica.
+6. **Deploy produzione:** push/`main` → Vercel progetto **`floremoria-dashboard`** (`www.floremoria.com`). Checklist: `PROMEMORIA_DEPLOY.md`. **Non** usare `deploy-incremental.sh` / VPS Aruba come se fosse il sito reale.
 
 Se Antigravity e Cursor discutono della stessa cosa **senza** questo handoff, hai già perso tempo: fermati e scrivi i punti 1–2.
 

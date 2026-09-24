@@ -1,149 +1,125 @@
-# PROMEMORIA DEPLOY — VPS Aruba (Lean, archivio + PM2)
+# PROMEMORIA DEPLOY — Produzione = Vercel
 
-Server di riferimento: **94.177.198.140** (adatta utente/path se diversi).
-
----
-
-## 1. Prerequisiti sul server (una tantum)
-
-### Node.js 20 LTS (Debian/Ubuntu)
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-node -v   # v20.x
-```
-
-### PM2 (process manager)
-
-```bash
-sudo npm install -g pm2
-pm2 startup systemd
-# Esegui il comando che PM2 stampa (sudo env PATH=...)
-```
+**Aggiornato:** 2026-09-24 (chiusura Fase 1 sicurezza contabilità)
 
 ---
 
-## 2. Cartella applicazione sul VPS
+## Regola non negoziabile
 
-Esempio: `/var/www/floremoria` (creala se non esiste).
+| Cosa | Dove |
+|------|------|
+| **Sito pubblico + dashboard** (`www.floremoria.com`, `floremoria.com`) | **Vercel** — progetto **`floremoria-dashboard`** |
+| Database produzione | **Neon** (env su Vercel) |
+| **NON** è il sito reale | VPS Aruba `94.177.198.140` |
 
-```bash
-sudo mkdir -p /var/www/floremoria
-sudo chown -R "$USER:$USER" /var/www/floremoria
-```
+**Nessun agente e nessun operatore deve pubblicare sul VPS come se fosse produzione del sito.**  
+Un `deploy-incremental.sh` / rsync sul VPS **non aggiorna** `www.floremoria.com`.
 
-Il file `deploy.sh` (sul Mac) carica l’archivio e lo estrae qui (variabile `DEPLOY_PATH`).
+Il progetto Vercel `floremoria` (`floremoria.vercel.app`) **non** è il dominio pubblico.
 
----
+### Cosa significa «pubblicato» (obbligatorio)
 
-## 3. Variabili `.env` sul server (obbligatorie / consigliate)
+**«Pubblicato» = solo** un deployment Vercel sul progetto `floremoria-dashboard` che sia:
 
-Crea `/var/www/floremoria/.env` (o `.env.production`) sul VPS, **mai** committare.
+1. **Status verde / Ready** (non Error, non Canceled, non Building), **e**
+2. **Environment / etichetta Production**, **e**
+3. **Verificato** con CLI o pannello, es.:
+   - `npx vercel ls floremoria-dashboard --scope floremoria-srl-s-projects` → riga più recente Production = Ready  
+   - `npx vercel inspect www.floremoria.com --scope floremoria-srl-s-projects` → `status ● Ready`, `target production`, SHA atteso
 
-| Variabile | Note |
-|-----------|------|
-| `DATABASE_URL` | PostgreSQL in produzione (stringa completa `postgresql://...`) |
-| `NEXT_PUBLIC_BASE_URL` | Es. `https://www.floremoria.com` (senza `/` finale) |
-| `NEXT_PUBLIC_SITE_URL` | Di solito uguale a `NEXT_PUBLIC_BASE_URL` |
-| `STRIPE_SECRET_KEY` | Live da Dashboard Stripe |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Se usi Elements / publishable |
-| `STRIPE_WEBHOOK_SECRET` | Quando attivi i webhook |
-| `PARTNER_INBOUND_API_SECRET` | Opzionale (legacy API partner) |
-| `PARTNER_INBOUND_CORS_ORIGIN` | CSV origini consentite in produzione |
-| `ADMIN_API_KEY` | Protezione route admin interne |
-| `SUPER_ADMIN_SETUP_TOKEN` | Solo per `node scripts/server-promote-super-admin.cjs` sul VPS |
-| `SUPER_ADMIN_LOGIN_PASSWORD` | Password login web Super Admin (email su /login) |
-| `ADMIN_LOGIN_PASSWORD` | Password login web Admin staff (`admin` o `staff.floremoria@gmail.com`) |
+**Non** contano come pubblicati: commit su `main`, ancestry git («il commit è antenato di un Ready»), deploy VPS, preview, deploy Error/Canceled, né «il codice c’è nel repo».
 
-**Nota Vercel:** non eseguire `prisma migrate deploy` nel `buildCommand` di Vercel se il DB di produzione è stato allineato con `db push` (storico comune su VPS). In quel caso applicare lo schema sul server con `npx prisma db push` o `migrate deploy` via SSH/tunnel, non in fase di build Vercel.
-| `FLOREMORIA_WEBHOOK_KEY` | Se usi `/api/logs/update` |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Checkout / mappe |
-| `GOOGLE_PLACES_API_KEY` / `GOOGLE_PLACE_ID` | Recensioni / Places |
-| `GA4_PROPERTY_ID` / `NEXT_PUBLIC_GA4_PROPERTY_ID` | Dashboard analytics |
-| `TWILIO_*` | Se invii WhatsApp da server |
-| `NEXT_PUBLIC_LEGAL_PRIVACY_URL` / `NEXT_PUBLIC_LEGAL_COOKIE_URL` | Link Iubenda quando pronti |
-
-Riferimento completo: **`.env.example`** nel repository.
+Se l’ultimo tentativo Production è **Error**, il sito può ancora servire un Ready **precedente**: va detto esplicitamente («live = SHA X; ultimo tentativo fallito = SHA Y»).
 
 ---
 
-## 4. Dopo aver caricato e estratto l’archivio (sul server)
+## 1. Pubblicazione in produzione (unica via)
 
-Esegui **nella cartella dell’app** (es. `/var/www/floremoria`):
+### Automatica (preferita)
 
-```bash
-cd /var/www/floremoria
+1. Commit + push su `main` del repo `FloreMoria/Floremoria.com`.
+2. Vercel costruisce e promuove su `floremoria-dashboard` → alias `www.floremoria.com`.
+3. Verifica: `npx vercel inspect www.floremoria.com --scope floremoria-srl-s-projects`  
+   oppure Dashboard Vercel → progetto `floremoria-dashboard` → Deployment Production → SHA git.
 
-# Dipendenze di produzione (--ignore-scripts evita il postinstall prisma senza CLI installata)
-npm ci --omit=dev --ignore-scripts
-
-# Client Prisma (obbligatorio sul server dopo l’estrazione)
-npx --yes prisma@6.19.2 generate
-# (Allinea la versione a quella in package-lock.json se aggiorni Prisma.)
-
-# Avvio / riavvio
-pm2 start npm --name floremoria -- run start
-# oppure, se usi ecosystem file:
-# pm2 start ecosystem.config.cjs
-pm2 save
-```
-
-**Nota:** il pacchetto **non** include `node_modules` (lean). `npm ci --omit=dev` ricostruisce solo le dipendenze runtime.
-
----
-
-## 5. Dal Mac — preparazione archivio
+### Manuale (solo se auto-deploy manca / bloccato)
 
 ```bash
 cd /percorso/floremoria
-chmod +x scripts/build-deploy-archive.sh
-./scripts/build-deploy-archive.sh
+npx vercel@latest --prod --scope floremoria-srl-s-projects
+# oppure dalla UI Vercel: Promote / Redeploy sul progetto floremoria-dashboard
 ```
 
-Genera **`floremoria-deploy.tar.gz`** nella root del progetto.
+**Se la build fallisce:** fermarsi, leggere i log Vercel, **non** “riparare” pubblicando sul VPS.
+
+### Migrazioni Prisma / Neon
+
+- Schema produzione = Neon collegato a Vercel.
+- Applicare migrazioni dal Mac/CI contro Neon (`prisma migrate deploy`), **non** nel `buildCommand` Vercel se lo storico è `db push`.
+- Il VPS ha un Postgres **locale** distinto: non confonderlo con Neon.
 
 ---
 
-## 6. Dal Mac — caricamento (SCP)
+## 2. Checklist post-deploy (2 minuti)
 
-```bash
-chmod +x deploy.sh
-export DEPLOY_SSH_USER="tuouser"      # es. root o utente SSH Aruba
-export DEPLOY_HOST="94.177.198.140"
-export DEPLOY_PATH="/var/www/floremoria"
-./deploy.sh
-```
+1. `https://www.floremoria.com/` → header `server: Vercel`.
+2. Home HTTP 200.
+3. `/dashboard/finance` → login admin → dati caricati (non pagina vuota/500).
+4. Checkout di prova fino a `checkout.stripe.com` (senza pagare).
 
 ---
 
-## 6-bis. Deploy incrementale (consigliato per modifiche frequenti)
+## 3. VPS Aruba — ruolo residuo (non sito)
 
-Trasferisce solo i file cambiati (rsync delta), poi build e restart PM2 sul server.
+Server: **94.177.198.140** (`ServerFloreMoria`).
+
+| Servizio | Stato tipico | Note |
+|----------|--------------|------|
+| `pm2` `floremoria` (Next :3000) | Spesso acceso | **Copia parallela**, DB locale; nginx blocca `/dashboard` con 404 |
+| nginx 80/443 | Acceso | `server_name` ancora su floremoria.com ma **DNS punta a Vercel** |
+| Docker Evolution API `:8080` | Acceso | Legacy WhatsApp; produzione Vercel usa **WhatsApp Cloud API** (env Meta) |
+| Postgres locale | Acceso | **Non** è Neon |
+| Crontab root | Vuoto | Verbali/cron Mac o Vercel Cron |
+
+**Deploy sul VPS** (`deploy.sh` / `deploy-incremental.sh`): solo se serve mantenere Evolution o un laboratorio.  
+**Mai** come sostituto del deploy Vercel.
+
+Dettaglio tecnico legacy (archivio lean, PM2, rsync): sezione «Appendice VPS» sotto.
+
+---
+
+## 4. Webhook e URL da tenere su Vercel
+
+Configurare su Stripe / PayPal / Meta verso:
+
+`https://www.floremoria.com/api/webhooks/...`
+
+Non puntare webhook all’IP Aruba per il traffico ordini/pagamenti.
+
+---
+
+## Appendice — VPS (solo manutenzione infrastruttura legacy)
+
+> Usare solo se si lavora esplicitamente sul VPS. Non aggiorna il sito reale.
+
+### Deploy incrementale (laboratorio)
 
 ```bash
-chmod +x deploy-incremental.sh
 export DEPLOY_SSH_USER="root"
 export DEPLOY_HOST="94.177.198.140"
 export DEPLOY_PATH="/var/www/floremoria"
 ./deploy-incremental.sh
 ```
 
-Dry-run per vedere quali file verrebbero inviati:
+Attenzione: su VPS da ~2 GB RAM `npm ci` / `next build` possono andare in OOM. Preferire build locale + rsync `.next` se serve proprio aggiornare quella copia.
+
+### Archivio lean
 
 ```bash
-DRY_RUN=1 ./deploy-incremental.sh
+./scripts/build-deploy-archive.sh
+./deploy.sh
 ```
 
----
+### Variabili tipiche sul VPS
 
-## 7. Firewall / reverse proxy
-
-- Apri **80/443** verso il processo (Nginx/Caddy → `localhost:3000` se Next ascolta in locale).
-- `NEXT_PUBLIC_*` richiede **rebuild** se cambi dominio dopo il primo deploy.
-
----
-
-## 8. File inclusi nell’archivio (lean)
-
-`.next/`, `public/`, `prisma/`, `package.json`, `package-lock.json`, **`next.config.ts`** (nel repo non esiste `next.config.js`).
+Vedi `.env.example`. Sul VPS attuale `DATABASE_URL` punta a **localhost**, non a Neon.

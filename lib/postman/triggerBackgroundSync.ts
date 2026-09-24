@@ -30,6 +30,10 @@ function cronSecret(): string | null {
  * Usato da traffico sito, dashboard communications e cron esterni.
  */
 export async function triggerPostmanBackgroundSync(): Promise<boolean> {
+    // Mai durante `next build`: PostmanSyncHeartbeat è nel root layout e `after()`
+    // partiva anche su /_not-found → fetch a /api/cron/postman-sync in fase statica.
+    if (process.env.NEXT_PHASE === 'phase-production-build') return false;
+
     const secret = cronSecret();
     const url = postmanSyncUrl();
     if (!secret || !url) return false;

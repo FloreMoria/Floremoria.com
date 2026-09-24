@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   // TikTok (e altri crawler) non seguono redirect: servire /path e /path/ senza 308.
   skipTrailingSlashRedirect: true,
   transpilePackages: ["swagger-ui-react"],
+  // Evita che video/foto Momo entrino nel bundle delle serverless (limite Vercel 250MB).
+  // Causa Error Production 2026-09-24: api/cron/pinterest-daily a 255.21MB.
+  outputFileTracingExcludes: {
+    '*': ['./public/media/social/momo/**'],
+  },
   experimental: {
     // Upload media campagne / proof: proxy buffer (video grandi usano Blob client-side).
     proxyClientMaxBodySize: '100mb',

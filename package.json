@@ -2,6 +2,9 @@
   "name": "floremoria",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "postinstall": "prisma generate",
     "predev": "node Script/generate-images-manifest.mjs",
@@ -9,7 +12,7 @@
     "prebuild": "node Script/generate-images-manifest.mjs && npm run merchant:feed && npm run test:florist-privacy && npm run test:commercialista-privacy",
     "test:florist-privacy": "tsx scripts/verify-florist-outbound-privacy.ts",
     "test:commercialista-privacy": "tsx scripts/verify-commercialista-corrispettivi-privacy.ts",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",

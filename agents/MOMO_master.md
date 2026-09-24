@@ -110,6 +110,7 @@
 4. Strip metadati: GPS, data, dispositivo.
 5. Pubblicazione solo dopo **almeno 4 settimane** dalla consegna.
 6. Testi post: nessun nome, nessuna data, **nessun cimitero indicato**.
+7. **Fioristi — STRADA B:** mai nominare né taggare il fiorista. Solo citazione generica della rete **a livello di regione** (es. «un fiorista partner FloreMoria in Lombardia»); **mai** città o paese. Tutti i social.
 
 ### 7.3 Coda «Da approvare»
 Ogni copia anonimizzata entra in coda Momo `PENDING_REVIEW`. Solo dopo approvazione umana è eleggibile per i social. Il cron Pinterest/Meta **non** pubblica asset non approvati.

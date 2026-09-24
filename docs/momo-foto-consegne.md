@@ -29,6 +29,12 @@
 - Traccia obbligatoria: **chi** ha approvato e **quando**.
 - **Nessuna pubblicazione automatica** su alcun social.
 
+### 1.4 Fioristi nei post — STRADA B (approvata)
+
+- Il fiorista **non** viene mai nominato né taggato nei post FloreMoria.
+- Solo citazione generica della rete **a livello di regione** (es. «un fiorista partner FloreMoria in Lombardia»).
+- **Mai** città o paese. Valida per tutti i social.
+
 ---
 
 ## 2. Regole di anonimizzazione (tutti i social, senza eccezioni)
@@ -42,7 +48,8 @@ Valide per **Pinterest, Instagram, Facebook e ogni social futuro**. Replicate in
 5. **Attesa minima:** pubblicazione solo dopo **almeno 4 settimane** dalla consegna  
    *(il team può proporre un valore diverso, motivandolo — vedi §6.3)*.
 6. **Testi post:** nessun nome, nessuna data, **nessun cimitero indicato**.
-7. Solo asset in coda Momo **«Da approvare»** → approvati da Admin/Super Admin.
+7. **Fioristi nei post — STRADA B (approvata):** il fiorista **non** viene mai nominato né taggato. Si cita solo la rete in modo generico, **a livello di regione** (es. «un fiorista partner FloreMoria in Lombardia»), **mai** la città o il paese. Valida per tutti i social.
+8. Solo asset in coda Momo **«Da approvare»** → approvati da Admin/Super Admin.
 
 ---
 
@@ -50,48 +57,25 @@ Valide per **Pinterest, Instagram, Facebook e ogni social futuro**. Replicate in
 
 ### 3.a Le 36 foto `/social-ready/` sono mai state pubblicate?
 
-**Inventario DB (sola lettura):**
+**Aggiornamento 2026-09-24 (verifica Graph API Meta + titolare):**
 
-| Esito | Quante | Note |
-|-------|--------|------|
-| Con `socialReadyPrimaryUrl` | **36** | Copia Sharp su blob `/social-ready/` |
-| Marcate pubblicate (`socialPublishedChannels` non vuoto) | **9** | Tutte: `META_INSTAGRAM` + `META_FACEBOOK` |
-| Non marcate pubblicate | **27** | Solo generate, non in coda publish |
-| Pinterest da queste URL | **0** | `pinterest-daily` usa ancora temi **Unsplash** |
-| Righe `marketing_campaigns` con URL `social-ready` / `foto-consegne` | **0** | Il pipeline delivery-proof aggiorna i canali sul proof **senza** salvare campagna collegata |
+| Fonte | Esito |
+|-------|--------|
+| DB `socialPublishedChannels` | **9** proof avevano `META_INSTAGRAM` + `META_FACEBOOK` |
+| Titolare (controllo manuale IG/FB) | Solo **2** post (1 IG + 1 FB), video Momo propri, **conformi** — **NON rimuovere nulla** |
+| Graph API `app_floremoria` / Page FloreMoria | Molti altri post di **calendario marketing** (Imagen/copy AI), **non** le 9 foto `/social-ready/` |
+| Confronto hash | Post Meta mattutini nello stesso orario dei flag **≠** file social-ready (nessun match SHA-256) |
 
-**Le 9 pubblicate (IG + FB)** — data pubblicazione ≈ `DeliveryProof.updatedAt` (ultimo write che include il push dei canali; tipicamente cron marketing del giorno dopo):
+**Da dove veniva il dato «9 pubblicati»?**  
+Dal solo campo DB `DeliveryProof.socialPublishedChannels`, valorizzato da `runDeliveryProofSocialPublishPipeline` su `result.success` **anche quando `result.simulated === true`** (POSTMAN simula se credenziali/canale non pronti, ma comunque restituisce success). Quindi il DB diceva «pubblicato» senza post reale con quella foto.
 
-| Ordine | Consegna | Sanificata | Publish stimato (UTC) | Giorni consegna→publish | Canali |
-|--------|----------|------------|----------------------|-------------------------|--------|
-| FT-MC-26-003 | 2026-07-04 | 2026-07-14 | 2026-09-13* | ~72* | IG+FB |
-| FT-PD-26-001 | 2026-07-16 | 2026-07-16 | 2026-07-17 | ~1 | IG+FB |
-| FT-ME-26-001 | 2026-07-17 | 2026-07-16 | 2026-07-17 | ~0 | IG+FB |
-| FT-MB-26-001 | 2026-07-22 | 2026-07-22 | 2026-07-23 | ~1 | IG+FB |
-| FF-CO-26-001 | 2026-07-22 | 2026-07-22 | 2026-07-23 | ~1 | IG+FB |
-| FT-MC-26-005 | 2026-07-30 | 2026-07-30 | 2026-07-31 | ~1 | IG+FB |
-| FT-CS-26-004 | 2026-08-01 | 2026-08-02 | 2026-08-04 | ~3 | IG+FB |
-| FT-PA-26-007 | 2026-08-01 | 2026-08-05 | 2026-08-06 | ~5 | IG+FB |
-| FT-ME-26-002 | 2026-08-06 | 2026-08-05 | 2026-08-06 | ~0 | IG+FB |
+**Correzione applicata (senza cancellare storia):**  
+- canali rinominati in `UNVERIFIED_CLAIM_META_INSTAGRAM` / `UNVERIFIED_CLAIM_META_FACEBOOK`  
+- audit completo in `SystemState` key `delivery_proof_social_publish_correction_2026-09-24`  
+- fix codice: push canale **solo** se `success && !simulated`
 
-\* `updatedAt` di FT-MC-26-003 è anomalo (settembre): può riflettere un re-touch successivo; i canali risultano comunque valorizzati.
-
-**Attesa 4 settimane:** **nessuna** delle 9 rispetta la nuova regola (tutte pubblicate entro pochi giorni, salvo il caso anomalo MC-003).
-
-**Sample visivo (4/9, sola lettura, file non modificati)** vs regole §2:
-
-| Ordine | Rispetta §2? | Problemi rilevati (senza ripetere PII nel dettaglio) |
-|--------|--------------|------------------------------------------------------|
-| FT-MC-26-003 | **No** | Croce/tomba riconoscibile; non solo fiori |
-| FT-PD-26-001 | **No** | Nastro con testo; mucchio terra/tomba; pezzo marmo vicino |
-| FT-ME-26-001 | **No — grave** | **Nome e date leggibili** su lapide; epigrafe |
-| FT-MB-26-001 | **No — grave** | **Ritratti** di defunti + **nomi e date** su monumento; fiori secondari |
-
-**Conclusione 3.a:** sì, **9/36** risultano pubblicate su Instagram e Facebook (non su Pinterest). **Non** rispettano le regole del punto 2 (attesa 4 settimane; in diversi casi identificabilità alta). Le altre **27** non risultano pubblicate sui social da questo flag.
-
-**Nota collaterale (home):** il carousel homepage usa `photoAfterUrl` (originale), non `/social-ready/` — fuori scope publish social, ma da tenere presente per privacy sito.
-
-**Raccomandazione operativa (richiede OK esplicito, non eseguita):** rimuovere subito dai profili Meta i post/reel collegati alle 9 (soprattutto ME-001 e MB-001); spegnere `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL` (env `=0`) finché non c’è coda Momo + regole §2.
+**Pinterest:** nessuna delle 36 usata (Unsplash).  
+**Env:** `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0` su `floremoria-dashboard` (production+preview).
 
 ---
 
@@ -146,7 +130,7 @@ Il titolare la farà verificare con Iubenda o avvocato prima dell’uso.
 
 | # | Passo | Esito | Dipende da |
 |---|--------|-------|------------|
-| **P0** | **Primo passo pronto:** spegnere publish automatico delivery-proof (`MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0` su Vercel `floremoria-dashboard`) + elenco ID Meta da far togliere a mano (9 ordini §3.a) | Stop emorragia | **OK titolare** |
+| **P0** | **Eseguito 2026-09-24:** `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0` su Vercel dashboard. **Nessun takedown** (titolare: solo 2 post Momo conformi). Flag DB 9 → `UNVERIFIED_CLAIM_*` + audit SystemState. Fix: non marcare canale se publish simulata. | Stop auto foto consegna | OK titolare |
 | P1 | Campo ordine `marketingPhotosOptOut` (default false) + casella checkout + blocco ingresso coda | Strada A tecnica | Testi legali live |
 | P2 | Estendere sanitizer / checklist review: rifiuta se OCR/face o review umana trova lapide/nastro/testo | Allinea §2 | P0 |
 | P3 | Tabella/coda Momo `PENDING_REVIEW` + UI Approva/Scarta + `approvedBy`/`approvedAt` | Decisione Q3 | P1–P2 |
@@ -158,10 +142,29 @@ Il titolare la farà verificare con Iubenda o avvocato prima dell’uso.
 
 ### Primo passo eseguibile (attende OK)
 
-> Impostare su Vercel progetto **floremoria-dashboard** la env  
-> `MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0`  
-> e far rimuovere manualmente i post Meta legati agli ordini della tabella §3.a.  
-> **Non eseguito** in questa sessione.
+> ~~Impostare env…~~ **Fatto 2026-09-24.** Prossimi passi sviluppo (P1+) restano in attesa di OK.
+
+---
+
+## 8. Automazioni che pubblicano all’esterno senza approvazione umana Admin (sola lettura 2026-09-24)
+
+> «Guardiani» AI ≠ Admin/Super Admin. Non spegnere nulla oltre P0 senza OK.
+
+| Automazione | Cosa pubblica | Dati cliente/defunto? |
+|-------------|---------------|------------------------|
+| **Cron `publish-campaigns`** (05:00 UTC) | Produce + pubblica slot calendario IG/FB/TikTok (feed, **story**, reel) se campagna `APPROVED` dai Guardiani AI | Copy/immagini di prodotto/marketing; **non** dovrebbe usare anagrafiche; rischio se copy/leak. **Non** usa `/social-ready/` delivery (da P0 delivery-proof off). |
+| **Cron `publish-campaigns-dispatch`** (07:00 UTC) | Solo publish pipeline (stesso POSTMAN) | Come sopra |
+| **Cron `pinterest-daily`** (ogni 2 gg) | Pin automatico Unsplash + watermark, link www | Stock Unsplash — **no** clienti/defunti |
+| **Delivery-proof social** (dentro publish pipeline) | Era: Reel da foto `/social-ready/` | **Sì rischio** foto tomba — **ORA DISATTIVATO** (`=0`) |
+| **Cron `vera-order-reminders`** | WhatsApp template: `customer_waiting_update`, `florist_reminder`, `anniversary_gdm_reminder` | **Sì:** telefono cliente/fiorista; anniversari legati a profilo defunto (nome in template possibile) |
+| **Cron `vera-inbound-debounce-flush`** | Risposte WhatsApp VERA debounce | **Sì:** chat operative con clienti/fioristi |
+| **Webhook WhatsApp / VERA runtime** | Risposte inbound (non cron) | **Sì:** conversazioni |
+| **Cron `punto-b-wake`** | Email conferma ordine cliente (transazionale) | **Sì:** dati ordine/cliente — non marketing social |
+| **Cron `postman-sync`** | Ingestione email assistenza (inbound), non publish outbound marketing | Contatti email in ingresso |
+| **Newsletter** | Opt-in checkout → `newsletterLog`; **nessun cron di invio massivo** trovato in repo | Solo registrazione interesse; invii non automatizzati qui |
+| **Homepage carousel** | Mostra `photoAfterUrl` (originali) sul sito | **Sì rischio** — non è “social post” ma pubblico web |
+
+**Nota campagne:** il publish campagne può ancora segnare `PUBLISHED` anche su esito **simulato** (bug gemello, meno grave perché `externalId` simulato è filtrabile). Da correggere in un passo dedicato con OK.
 
 ---
 

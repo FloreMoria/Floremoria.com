@@ -117,7 +117,7 @@ export async function runDeliveryProofSocialPublishPipeline(
 
       results.push(result);
 
-      if (result.success) {
+      if (result.success && !result.simulated) {
         const updated = await prisma.deliveryProof.update({
           where: { id: proof.id },
           data: {
@@ -130,9 +130,12 @@ export async function runDeliveryProofSocialPublishPipeline(
         proof.socialPublishedChannels = updated.socialPublishedChannels;
 
         console.log(
-          `[Marketing Publish] ✔ Proof ${proof.id} → ${channel} PUBLISHED${
-            result.simulated ? ' (simulata)' : ''
-          }`
+          `[Marketing Publish] ✔ Proof ${proof.id} → ${channel} PUBLISHED`
+        );
+      } else if (result.success && result.simulated) {
+        // Non marcare il canale come pubblicato: simulated = nessun post reale su Meta.
+        console.log(
+          `[Marketing Publish] ⚠ Proof ${proof.id} → ${channel} SIMULATA (canale NON segnato come pubblicato)`
         );
       } else {
         console.warn(

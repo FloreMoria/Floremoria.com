@@ -6,6 +6,8 @@
  * - 'publish': accodamento pubblicazione social.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs';
+import path from 'node:path';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
     CERTIFIED_MONUMENTS,
@@ -20,14 +22,55 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function getLocalDiskRenders() {
+    try {
+        const rendersDir = path.join(process.cwd(), 'public', 'media', 'social', 'momo', 'renders');
+        if (!fs.existsSync(rendersDir)) {
+            return [];
+        }
+        const files = fs.readdirSync(rendersDir);
+        const videoFiles = files.filter((f) => /\.(mp4|mov|webm|m4v)$/i.test(f));
+        const items = videoFiles.map((filename) => {
+            const fullPath = path.join(rendersDir, filename);
+            const stat = fs.statSync(fullPath);
+            return {
+                filename,
+                url: `/media/social/momo/renders/${filename}`,
+                size: stat.size,
+                mtime: stat.mtimeMs,
+                createdAt: stat.mtime.toISOString(),
+            };
+        });
+        items.sort((a, b) => b.mtime - a.mtime);
+        return items;
+    } catch (e) {
+        console.warn('[MOMO Renders] Error checking local renders:', e);
+        return [];
+    }
+}
+
+export async function GET(req: NextRequest) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
+
+    const action = req.nextUrl.searchParams.get('action');
+    const diskRenders = getLocalDiskRenders();
+
+    if (action === 'latest_render' || action === 'list_renders' || action === 'renders') {
+        return NextResponse.json({
+            ok: true,
+            renders: diskRenders,
+            latest: diskRenders[0] || null,
+        });
+    }
+
     return NextResponse.json({
         monuments: CERTIFIED_MONUMENTS,
         formats: MOMO_NARRATIVE_FORMATS,
         voices: MOMO_VOICE_PROFILES,
         music: MOMO_MUSIC_LIBRARY,
+        diskRenders,
+        latestRender: diskRenders[0] || null,
     });
 }
 
@@ -126,6 +169,17 @@ export async function POST(req: NextRequest) {
                 status: 'QUEUED_PENDING_ADMIN_CONFIRM',
                 channels: selected,
                 note: 'MOMO non pubblica in autonomia: intent registrato. Completare dispatch con POSTMAN / Amministratore.',
+            });
+        }
+
+        case 'latest_render':
+        case 'list_renders':
+        case 'renders': {
+            const diskRenders = getLocalDiskRenders();
+            return NextResponse.json({
+                ok: true,
+                renders: diskRenders,
+                latest: diskRenders[0] || null,
             });
         }
 

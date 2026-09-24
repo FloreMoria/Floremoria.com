@@ -16,6 +16,20 @@ type Catalog = {
     formats?: MomoFormatDescriptor[];
     voices: MomoVoiceProfile[];
     music: MomoMusicTrack[];
+    diskRenders?: Array<{
+        filename: string;
+        url: string;
+        size: number;
+        mtime: number;
+        createdAt: string;
+    }>;
+    latestRender?: {
+        filename: string;
+        url: string;
+        size: number;
+        mtime: number;
+        createdAt: string;
+    } | null;
 };
 
 const CHANNELS: Array<{ id: MomoSocialChannel; label: string }> = [
@@ -80,6 +94,13 @@ export default function MomoVideoPanel() {
         timestamp: string;
     }>>([]);
 
+    // Stato Player Video Reattivo (Mai percorsi statici/hardcoded di test)
+    const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
+    const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
+    const [currentVideoSource, setCurrentVideoSource] = useState<'upload' | 'render' | null>(null);
+    const [checkingDiskRenders, setCheckingDiskRenders] = useState(false);
+    const [diskRendersNote, setDiskRendersNote] = useState<string | null>(null);
+
     // Helpers per nomenclatura progressiva: [slug]_[YYYY-MM-DD]_[seq].mp4
     const currentSlug = (() => {
         const raw = fetchedAssets?.locationName || locationQuery || 'cimitero_storico';
@@ -101,7 +122,7 @@ export default function MomoVideoPanel() {
     })();
 
     const targetOutputRelativePath = `public/media/social/momo/renders/${currentSlug}_${todayDateStr}_01.mp4`;
-    const currentFileName = plan?.videoRelativePath?.split('/').pop() || `${currentSlug}_${todayDateStr}_01.mp4`;
+    const currentFileName = activeVideoName || plan?.videoRelativePath?.split('/').pop() || `${currentSlug}_${todayDateStr}_01.mp4`;
     const currentSrtFileName = currentFileName.replace(/\.mp4$/i, '.srt');
 
     // Generazione comando CLI per Mac con nomenclatura progressiva
@@ -127,7 +148,57 @@ export default function MomoVideoPanel() {
         setTimeout(() => setCopiedCli(false), 2500);
     };
 
-    // Caricamento catalogo iniziale e primo reel di anteprima
+    // Ricerca e caricamento dell'ultimo Reel renderizzato dal Mac su disco
+    const fetchLatestRender = async (silent = false) => {
+        setCheckingDiskRenders(true);
+        setDiskRendersNote(null);
+        try {
+            const res = await fetch('/api/dashboard/momo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'latest_render' }),
+            });
+            const data = await res.json();
+            if (res.ok && data.renders && data.renders.length > 0) {
+                const latest = data.renders[0];
+                const cacheBustedUrl = `${latest.url}?v=${Date.now()}`;
+                setCurrentVideoUrl(cacheBustedUrl);
+                setActiveVideoName(latest.filename);
+                setCurrentVideoSource('render');
+                setRenderHistory(
+                    data.renders.map((r: { filename: string; url: string; mtime?: number; createdAt?: string }) => ({
+                        url: r.url,
+                        filename: r.filename,
+                        location: r.filename.replace(/_\d{4}-\d{2}-\d{2}_\d{2}\.mp4$/, '').replace(/_/g, ' '),
+                        timestamp: new Date(r.mtime || r.createdAt || Date.now()).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                    }))
+                );
+                if (!silent) {
+                    setDiskRendersNote(`✓ Caricato ultimo Reel da disco: ${latest.filename}`);
+                    setTimeout(() => setDiskRendersNote(null), 4500);
+                }
+                return latest;
+            } else {
+                if (!silent) {
+                    setDiskRendersNote('Nessun video trovato in public/media/social/momo/renders/. Renderizza un reel per vederlo qui.');
+                    setTimeout(() => setDiskRendersNote(null), 5000);
+                }
+                return null;
+            }
+        } catch (e) {
+            if (!silent) {
+                setError('Impossibile verificare i render presenti su disco');
+            }
+            return null;
+        } finally {
+            setCheckingDiskRenders(false);
+        }
+    };
+
+    // Caricamento catalogo iniziale, verifica render su disco e piano editoriale
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -138,7 +209,26 @@ export default function MomoVideoPanel() {
                 if (cancelled) return;
                 setCatalog(data);
 
-                // Carica automaticamente l'anteprima iniziale
+                // Se presenti render su disco, popola lo storico e seleziona l'ultimo
+                if (data.diskRenders && data.diskRenders.length > 0) {
+                    setRenderHistory(
+                        data.diskRenders.map((r: { filename: string; url: string; mtime?: number; createdAt?: string }) => ({
+                            url: r.url,
+                            filename: r.filename,
+                            location: r.filename.replace(/_\d{4}-\d{2}-\d{2}_\d{2}\.mp4$/, '').replace(/_/g, ' '),
+                            timestamp: new Date(r.mtime || r.createdAt || Date.now()).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            }),
+                        }))
+                    );
+                    const latest = data.diskRenders[0];
+                    setCurrentVideoUrl(`${latest.url}?v=${Date.now()}`);
+                    setActiveVideoName(latest.filename);
+                    setCurrentVideoSource('render');
+                }
+
+                // Carica il piano editoriale iniziale (senza render automatico)
                 const planRes = await fetch('/api/dashboard/momo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -219,9 +309,23 @@ export default function MomoVideoPanel() {
         }
     };
 
-    // Upload file con tolleranza totale formati
+    // Upload file con tolleranza totale formati e anteprima reattiva a zero latenza
     const handleFileUpload = async (file: File) => {
         if (!file) return;
+        const isVideo =
+            file.type.startsWith('video') ||
+            /\.(mp4|mov|webm|m4v|qt|MOV|MP4)$/i.test(file.name);
+
+        // Anteprima immediata a zero latenza per video caricato dall'utente
+        if (isVideo) {
+            const localPreviewUrl = URL.createObjectURL(file);
+            setCurrentVideoUrl(localPreviewUrl);
+            setActiveVideoName(file.name);
+            setCurrentVideoSource('upload');
+            setDiskRendersNote(`🎬 Anteprima video caricato: ${file.name}`);
+            setTimeout(() => setDiskRendersNote(null), 4000);
+        }
+
         setUploading(true);
         setError(null);
         try {
@@ -254,7 +358,7 @@ export default function MomoVideoPanel() {
                 path: data.path,
                 name: data.name || file.name,
                 size: data.size || file.size,
-                type: data.type || (file.type.startsWith('video') ? 'video' : 'image'),
+                type: data.type || (isVideo ? 'video' : 'image'),
             });
             if (data.type === 'image') {
                 setSelectedImages((prev) => [data.path, ...prev]);
@@ -337,6 +441,10 @@ export default function MomoVideoPanel() {
             if (data.plan.videoRelativePath) {
                 const url = data.plan.videoRelativePath;
                 const fn = url.split('/').pop() || `${currentSlug}_${todayDateStr}_01.mp4`;
+                const cacheBustedUrl = `${url}?v=${Date.now()}`;
+                setCurrentVideoUrl(cacheBustedUrl);
+                setActiveVideoName(fn);
+                setCurrentVideoSource('render');
                 setRenderHistory((prev) => {
                     const item = {
                         url,
@@ -344,7 +452,7 @@ export default function MomoVideoPanel() {
                         location: data.plan.query || locationQuery,
                         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     };
-                    return [item, ...prev.filter((p) => p.url !== url)].slice(0, 6);
+                    return [item, ...prev.filter((p) => p.url !== url)].slice(0, 10);
                 });
             }
             setRenderStep('Render completato con successo!');
@@ -823,19 +931,28 @@ export default function MomoVideoPanel() {
                     </button>
                     <button
                         type="button"
+                        onClick={() => void fetchLatestRender(false)}
+                        disabled={checkingDiskRenders}
+                        className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                        title="Ricarica dal disco in public/media/social/momo/renders/ l'ultimo reel renderizzato da Swift"
+                    >
+                        {checkingDiskRenders ? '⏳ Verifica…' : '🔄 Ricarica Ultimo Reel dal Disco'}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => void publish()}
                         disabled={!plan || publishing || channels.length === 0}
                         className="rounded-xl border border-rose-500 bg-rose-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 hover:bg-rose-700 transition-colors shadow-sm inline-flex items-center gap-1.5"
                     >
                         {publishing ? 'In coda…' : '🚀 Pubblica su Reels & Social'}
                     </button>
-                    {plan?.videoRelativePath && (
+                    {currentVideoUrl && (
                         <a
-                            href={plan.videoRelativePath}
-                            download={currentFileName}
+                            href={currentVideoUrl}
+                            download={activeVideoName || currentFileName}
                             className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5 shadow-xs"
                         >
-                            📥 Scarica {currentFileName.endsWith('.mp4') ? currentFileName : `${currentFileName}.mp4`}
+                            📥 Scarica {(activeVideoName || currentFileName).endsWith('.mp4') ? (activeVideoName || currentFileName) : `${activeVideoName || currentFileName}.mp4`}
                         </a>
                     )}
                     {plan?.srtRelativePath && (
@@ -856,6 +973,19 @@ export default function MomoVideoPanel() {
                 </p>
             )}
 
+            {diskRendersNote && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-900 flex items-center justify-between shadow-xs">
+                    <span>{diskRendersNote}</span>
+                    <button
+                        type="button"
+                        onClick={() => setDiskRendersNote(null)}
+                        className="text-xs text-emerald-700 hover:text-emerald-950 font-bold px-1.5"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {/* Banner Architettura Ibrida */}
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 text-xs text-indigo-950 flex items-start gap-2.5">
                 <span className="text-base">⚡</span>
@@ -872,19 +1002,24 @@ export default function MomoVideoPanel() {
             {/* SEZIONE 5: Anteprima Video Verticale 9:16 + Sticker Nativo + Didascalia Anti-Spoiler */}
             {plan && (
                 <div className="grid gap-6 md:grid-cols-2 pt-2 border-t border-stone-200">
-                    {/* Colonna Sinistra: Player Video 9:16 */}
+                    {/* Colonna Sinistra: Player Video 9:16 Reattivo */}
                     <div className="space-y-3 mx-auto w-full max-w-[340px]">
                         <div className="rounded-2xl border border-stone-800 bg-black aspect-[9/16] max-h-[580px] flex flex-col items-center justify-center text-center overflow-hidden shadow-lg relative w-full">
                             {/* Badge Nome File Video in Riproduzione */}
-                            <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-xs text-white text-[10px] font-mono font-medium px-2.5 py-1 rounded-full border border-white/20 shadow-xs flex items-center gap-1.5 z-10 max-w-[90%]">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
-                                <span className="truncate">{currentFileName}</span>
-                            </div>
+                            {currentVideoUrl && (
+                                <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-medium px-2.5 py-1 rounded-full border border-white/20 shadow-xs flex items-center gap-1.5 z-10 max-w-[90%]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
+                                    <span className="truncate">{activeVideoName || currentFileName}</span>
+                                    <span className="text-[9px] text-stone-400 shrink-0 uppercase tracking-wider">
+                                        {currentVideoSource === 'upload' ? '· Upload' : '· MOMO Reel'}
+                                    </span>
+                                </div>
+                            )}
 
-                            {plan.videoRelativePath ? (
+                            {currentVideoUrl ? (
                                 <video
-                                    key={plan.videoRelativePath}
-                                    src={plan.videoRelativePath}
+                                    key={currentVideoUrl}
+                                    src={currentVideoUrl}
                                     controls
                                     autoPlay
                                     muted
@@ -892,49 +1027,81 @@ export default function MomoVideoPanel() {
                                     loop
                                     className="w-full h-full object-contain"
                                 />
-                            ) : plan.status === 'RENDERED_READY_FOR_PUBLISH' ? (
-                                <div className="p-4 space-y-2">
-                                    <p className="text-stone-300 text-xs uppercase tracking-widest">
-                                        Anteprima video · {plan.width}×{plan.height}
-                                    </p>
-                                    <p className="text-white text-sm font-medium px-2">
-                                        {plan.socialMetadata.title}
-                                    </p>
-                                    <p className="text-stone-400 text-xs mt-2">
-                                        Output: {plan.videoRelativePath}
-                                    </p>
-                                </div>
                             ) : (
-                                <p className="text-stone-400 text-sm">Piano in preparazione…</p>
+                                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-stone-900 via-stone-900 to-black text-white relative">
+                                    <div className="w-14 h-14 rounded-2xl bg-stone-800/90 border border-stone-700/80 flex items-center justify-center text-2xl mb-3 shadow-inner text-amber-300">
+                                        🎬
+                                    </div>
+                                    <h4 className="text-sm font-semibold text-stone-100 tracking-tight mb-1">
+                                        Nessun Reel caricato o selezionato
+                                    </h4>
+                                    <p className="text-xs text-stone-400 max-w-[240px] leading-relaxed mb-5">
+                                        Cerca una location e renderizza con Ken Burns, oppure trascina qui il tuo video girato dal vivo.
+                                    </p>
+                                    <div className="flex flex-col gap-2 w-full max-w-[220px]">
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                        >
+                                            📁 Carica Video Personale
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void fetchLatestRender(false)}
+                                            disabled={checkingDiskRenders}
+                                            className="w-full py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-xs font-medium transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {checkingDiskRenders ? '⏳ Ricerca…' : '🔄 Cerca Ultimo Render'}
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                         </div>
 
                         {/* Cronologia / Switcher Ultimi Reel Generati */}
-                        {renderHistory.length > 1 && (
+                        {renderHistory.length > 0 && (
                             <div className="rounded-xl border border-stone-200 bg-stone-50 p-2.5 space-y-1.5">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                                    🎞️ Cronologia Reel Generati:
-                                </span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
+                                        🎞️ Storico Reel Generati ({renderHistory.length}):
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => void fetchLatestRender(false)}
+                                        disabled={checkingDiskRenders}
+                                        className="text-[10px] font-semibold text-stone-600 hover:text-stone-900 transition-colors"
+                                    >
+                                        {checkingDiskRenders ? '⏳' : '🔄 Aggiorna'}
+                                    </button>
+                                </div>
                                 <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                                    {renderHistory.map((item) => (
-                                        <button
-                                            key={item.url}
-                                            type="button"
-                                            onClick={() => {
-                                                if (plan) {
-                                                    setPlan({ ...plan, videoRelativePath: item.url, previewUrl: item.url });
-                                                }
-                                            }}
-                                            className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-colors flex items-center gap-1 ${
-                                                plan.videoRelativePath === item.url
-                                                    ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
-                                                    : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200'
-                                            }`}
-                                        >
-                                            <span>🎬 {item.filename}</span>
-                                            <span className="opacity-60 text-[9px]">({item.timestamp})</span>
-                                        </button>
-                                    ))}
+                                    {renderHistory.map((item) => {
+                                        const isSelected = activeVideoName === item.filename || (currentVideoUrl && currentVideoUrl.includes(item.url));
+                                        return (
+                                            <button
+                                                key={item.url}
+                                                type="button"
+                                                onClick={() => {
+                                                    const cacheBusted = `${item.url}?v=${Date.now()}`;
+                                                    setCurrentVideoUrl(cacheBusted);
+                                                    setActiveVideoName(item.filename);
+                                                    setCurrentVideoSource('render');
+                                                    if (plan) {
+                                                        setPlan({ ...plan, videoRelativePath: item.url, previewUrl: item.url });
+                                                    }
+                                                }}
+                                                className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-colors flex items-center gap-1 ${
+                                                    isSelected
+                                                        ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                                                        : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200'
+                                                }`}
+                                            >
+                                                <span>🎬 {item.filename}</span>
+                                                <span className="opacity-60 text-[9px]">({item.timestamp})</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

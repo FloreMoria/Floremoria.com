@@ -400,7 +400,7 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
     const { relativePath: videoRelativePath, srtRelativePath } = computeMomoRenderPath(locationInput.id);
 
     return {
-        status: 'RENDERED_READY_FOR_PUBLISH',
+        status: 'RENDER_PLANNED',
         monumentId: locationInput.id,
         query: rawQuery,
         script,

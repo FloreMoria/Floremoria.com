@@ -493,22 +493,31 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Eliminare questo rendiconto e i movimenti estratti?')) return;
+    const handleArchive = async (id: string) => {
+        const typed = window.prompt(
+            'Archiviazione soft: l’estratto sparisce dalle liste ma i dati restano.\nDigita ARCHIVIA per confermare:'
+        );
+        if (typed == null) return;
+        if (typed.trim() !== 'ARCHIVIA') {
+            setError('Archiviazione annullata: digita esattamente ARCHIVIA.');
+            return;
+        }
         setDeletingId(id);
         try {
             const res = await fetch(`/api/dashboard/finance/bank-statements/${id}`, {
                 method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: 'ARCHIVIA' }),
             });
             const parsed = await readJsonResponse(res);
-            if (!parsed.ok) throw new Error(parsed.error || 'Eliminazione fallita');
+            if (!parsed.ok) throw new Error(parsed.error || 'Archiviazione fallita');
             setDocs((prev) => prev.filter((d) => d.id !== id));
             if (activeDocId === id) {
                 setActiveDocId(null);
             }
             await loadMovements(yearFilter);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Eliminazione fallita');
+            setError(e instanceof Error ? e.message : 'Archiviazione fallita');
         } finally {
             setDeletingId(null);
         }
@@ -1571,15 +1580,15 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                                                         <button
                                                             type="button"
                                                             disabled={deletingId === doc.id}
-                                                            onClick={() => void handleDelete(doc.id)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold disabled:opacity-50"
+                                                            onClick={() => void handleArchive(doc.id)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-900 hover:bg-amber-50 text-xs font-semibold disabled:opacity-50"
                                                         >
                                                             {deletingId === doc.id ? (
                                                                 <Loader2 size={13} className="animate-spin" />
                                                             ) : (
                                                                 <Trash2 size={13} />
                                                             )}
-                                                            Elimina
+                                                            Archivia
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1715,15 +1724,15 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                                                 <button
                                                     type="button"
                                                     disabled={deletingId === doc.id}
-                                                    onClick={() => void handleDelete(doc.id)}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold disabled:opacity-50"
+                                                    onClick={() => void handleArchive(doc.id)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-900 hover:bg-amber-50 text-xs font-semibold disabled:opacity-50"
                                                 >
                                                     {deletingId === doc.id ? (
                                                         <Loader2 size={13} className="animate-spin" />
                                                     ) : (
                                                         <Trash2 size={13} />
                                                     )}
-                                                    Elimina
+                                                    Archivia
                                                 </button>
                                             </div>
                                         </td>

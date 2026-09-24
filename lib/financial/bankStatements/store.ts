@@ -181,6 +181,7 @@ function documentSourceMeta(fileName: string, contentType: string): string {
 
 export async function listBankStatements() {
     return prisma.bankStatementDocument.findMany({
+        where: { archivedAt: null },
         orderBy: { uploadedAt: 'desc' },
         select: {
             id: true,
@@ -198,6 +199,7 @@ export async function listBankStatements() {
             uploadedAt: true,
             processedAt: true,
             metadataJson: true,
+            archivedAt: true,
         },
     });
 }
@@ -240,7 +242,12 @@ export async function listBankStatementMovements(params?: {
             : undefined;
 
     const lines = await prisma.bankStatementLine.findMany({
-        where: dateFilter,
+        where: {
+            AND: [
+                ...(dateFilter ? [dateFilter] : []),
+                { document: { archivedAt: null } },
+            ],
+        },
         orderBy: [
             { accountingDate: 'desc' },
             { valueDate: 'desc' },
@@ -313,11 +320,13 @@ export async function listBankStatementMovements(params?: {
         })
         .map(({ source: _source, dateIso: _dateIso, ...row }) => row);
 
-    // Anni disponibili su tutto l'archivio (non solo sul filtro corrente)
+    // Anni disponibili su tutto l'archivio attivo (non solo sul filtro corrente)
     const yearRows = await prisma.$queryRaw<Array<{ y: number }>>`
-        SELECT DISTINCT EXTRACT(YEAR FROM COALESCE(accounting_date, value_date))::int AS y
-        FROM bank_statement_lines
-        WHERE COALESCE(accounting_date, value_date) IS NOT NULL
+        SELECT DISTINCT EXTRACT(YEAR FROM COALESCE(l.accounting_date, l.value_date))::int AS y
+        FROM bank_statement_lines l
+        INNER JOIN bank_statement_documents d ON d.id = l.document_id
+        WHERE COALESCE(l.accounting_date, l.value_date) IS NOT NULL
+          AND d.archived_at IS NULL
         ORDER BY y DESC
     `;
 
@@ -344,17 +353,24 @@ export async function getBankStatementDetail(id: string) {
     });
 }
 
-export async function deleteBankStatement(id: string) {
+/**
+ * Soft-archive: nasconde l'estratto dalle liste operative.
+ * Non cancella blob, documento né linee (Fase 1 sicurezza).
+ */
+export async function archiveBankStatement(id: string): Promise<boolean> {
     const doc = await prisma.bankStatementDocument.findUnique({ where: { id } });
     if (!doc) return false;
-    await deleteStoredFile(doc.blobPath, doc.storageKind, doc.blobUrl);
-    // Restrict su FK: eliminare esplicitamente le righe prima del documento
-    // (niente cascade distruttivo implicito verso movimenti / riferimenti).
-    await prisma.$transaction([
-        prisma.bankStatementLine.deleteMany({ where: { documentId: id } }),
-        prisma.bankStatementDocument.delete({ where: { id } }),
-    ]);
+    if (doc.archivedAt) return true;
+    await prisma.bankStatementDocument.update({
+        where: { id },
+        data: { archivedAt: new Date() },
+    });
     return true;
+}
+
+/** @deprecated Preferire archiveBankStatement — non elimina più dati. */
+export async function deleteBankStatement(id: string) {
+    return archiveBankStatement(id);
 }
 
 /**
@@ -396,6 +412,23 @@ export async function uploadAndProcessBankStatement(input: {
         where: { sha256Hash: fileHash },
     });
     if (existingDoc) {
+        // Documento archiviato: riattiva invece di creare un duplicato (sha256 unique).
+        if (existingDoc.archivedAt) {
+            await prisma.bankStatementDocument.update({
+                where: { id: existingDoc.id },
+                data: { archivedAt: null },
+            });
+            const restored = await getBankStatementDetail(existingDoc.id);
+            return restored
+                ? {
+                      ...restored,
+                      parseSummary:
+                          'Estratto conto già in archivio (hash identico) — ripristinato dall’archivio soft.',
+                      duplicateSha256: true,
+                      restoredFromArchive: true,
+                  }
+                : restored;
+        }
         const detail = await getBankStatementDetail(existingDoc.id);
         return detail
             ? {
@@ -662,7 +695,7 @@ export async function buildBankReconciliationReport(
               include: { lines: { where: { matchStatus: { not: 'MATCHED' } }, take: 25, orderBy: { lineIndex: 'asc' } } },
           })
         : await prisma.bankStatementDocument.findFirst({
-              where: { status: { in: ['PARSED', 'RECONCILED'] } },
+              where: { status: { in: ['PARSED', 'RECONCILED'] }, archivedAt: null },
               orderBy: { uploadedAt: 'desc' },
               include: {
                   lines: {
@@ -836,6 +869,24 @@ export async function confirmFinecoPaste(rawText: string) {
         where: { sha256Hash: fileHash },
     });
     if (existingDoc) {
+        if (existingDoc.archivedAt) {
+            await prisma.bankStatementDocument.update({
+                where: { id: existingDoc.id },
+                data: { archivedAt: null },
+            });
+            const detail = await getBankStatementDetail(existingDoc.id);
+            return {
+                document: detail,
+                savedCount: 0,
+                skippedDuplicates: parsed.pasteMovements.length,
+                matchedCount: existingDoc.matchedCount,
+                unmatchedCount: existingDoc.unmatchedCount,
+                openPeriodLabel: open.label,
+                message:
+                    'Questo testo Fineco era archiviato (hash identico) — ripristinato dall’archivio soft.',
+                restoredFromArchive: true,
+            };
+        }
         const detail = await getBankStatementDetail(existingDoc.id);
         return {
             document: detail,

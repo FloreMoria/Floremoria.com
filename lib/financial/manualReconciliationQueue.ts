@@ -118,6 +118,7 @@ export function buildPendingLinesWhere(params: {
 
     const where: Record<string, unknown> = {
         matchStatus: { not: 'MATCHED' },
+        document: { archivedAt: null },
         OR: dateOr,
     };
 

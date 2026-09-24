@@ -5,7 +5,6 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { del } from '@vercel/blob';
 import JSZip from 'jszip';
 import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback, getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
@@ -99,14 +98,18 @@ async function readBytes(
 
 export async function listSaasForeignInvoices(periodKey?: string) {
     return prisma.saasForeignInvoice.findMany({
-        where: periodKey ? { periodKey } : undefined,
+        where: {
+            archivedAt: null,
+            ...(periodKey ? { periodKey } : {}),
+        },
         orderBy: { invoiceDate: 'desc' },
     });
 }
 
-/** Totali fiscali: esclude QUARANTINE / REJECTED (NULL legacy incluso). */
+/** Totali fiscali: esclude QUARANTINE / REJECTED (NULL legacy incluso) e archiviati. */
 export async function sumSaasForeignEurCents(): Promise<number> {
     const rows = await prisma.saasForeignInvoice.findMany({
+        where: { archivedAt: null },
         select: { eurAmountCents: true, verificationStatus: true },
     });
     return rows
@@ -217,23 +220,24 @@ export async function uploadSaasForeignInvoice(input: {
     }
 }
 
-export async function deleteSaasForeignInvoice(id: string) {
+/**
+ * Soft-archive: nasconde la fattura dalle liste operative.
+ * Non cancella blob né riga DB (Fase 1 sicurezza).
+ */
+export async function archiveSaasForeignInvoice(id: string): Promise<boolean> {
     const row = await prisma.saasForeignInvoice.findUnique({ where: { id } });
     if (!row) return false;
-    if (row.storageKind === 'local' && fs.existsSync(row.blobPath)) {
-        fs.unlinkSync(row.blobPath);
-    } else {
-        const token = getBlobToken();
-        if (token) {
-            try {
-                await del(row.blobUrl || row.blobPath, { token });
-            } catch (err) {
-                console.warn('[saas-invoices] delete blob', err);
-            }
-        }
-    }
-    await prisma.saasForeignInvoice.delete({ where: { id } });
+    if (row.archivedAt) return true;
+    await prisma.saasForeignInvoice.update({
+        where: { id },
+        data: { archivedAt: new Date() },
+    });
     return true;
+}
+
+/** @deprecated Preferire archiveSaasForeignInvoice — non elimina più dati. */
+export async function deleteSaasForeignInvoice(id: string) {
+    return archiveSaasForeignInvoice(id);
 }
 
 export async function buildSaasInvoicesZip(year: number, month: number): Promise<{
@@ -243,7 +247,7 @@ export async function buildSaasInvoicesZip(year: number, month: number): Promise
 }> {
     const periodKey = `${year}-${String(month).padStart(2, '0')}`;
     const rows = await prisma.saasForeignInvoice.findMany({
-        where: { periodKey },
+        where: { periodKey, archivedAt: null },
         orderBy: { invoiceDate: 'asc' },
     });
     if (rows.length === 0) {

@@ -7,7 +7,6 @@ import {
     RefreshCw,
     Landmark,
     Receipt,
-    Pencil,
     Archive,
     FileSpreadsheet,
 } from 'lucide-react';
@@ -112,8 +111,6 @@ export default function TaxQuarterlyPanel({
     const [downloading, setDownloading] = useState(false);
     const [downloadingCommercialista, setDownloadingCommercialista] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
-    const [editRow, setEditRow] = useState<TaxRegisterRow | null>(null);
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         try {
@@ -306,38 +303,6 @@ export default function TaxQuarterlyPanel({
         );
     };
 
-    const handleSaveEdit = async () => {
-        if (!editRow) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const res = await fetch('/api/dashboard/finance/tax-register', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    orderId: editRow.orderId,
-                    floristCompensationCents: editRow.floristCompensationCents,
-                    floristVatRate: editRow.floristVatRate,
-                    floristSettlementStatus: editRow.settlementStatus,
-                    accessoryAmountCents: editRow.accessoryGrossCents,
-                    financeNotes: editRow.financeNotes,
-                    paymentMethodLabel: editRow.gatewayLabel.split('·')[0]?.trim() || undefined,
-                    grossCents: editRow.grossCents,
-                    gatewayFeeCents: editRow.gatewayFeeCents,
-                }),
-            });
-            const data = await res.json();
-            if (!data.ok) throw new Error(data.error || 'Salvataggio fallito');
-            setEditRow(null);
-            setMessage(`Ordine ${data.row.orderNumber} aggiornato.`);
-            await loadReport();
-        } catch (err) {
-            setMessage(err instanceof Error ? err.message : 'Errore salvataggio');
-        } finally {
-            setSaving(false);
-        }
-    };
-
     return (
         <div className="p-6 space-y-6">
             {variant === 'fisco' ? (
@@ -477,7 +442,8 @@ export default function TaxQuarterlyPanel({
                     <p className="text-sm text-amber-800 mt-1 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                         Non è il Registro Corrispettivi fiscale. Periodo su data creazione ordine
                         (createdAt) — utile per margine e liquidazione fiorista, non per LIPE.
-                        Fonte fiscale: blocco Fisco → Registro Corrispettivi (commercialista).
+                        Sola lettura: nessuna modifica agli ordini da qui. Fonte fiscale: blocco
+                        Fisco → Registro Corrispettivi (commercialista).
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -581,11 +547,11 @@ export default function TaxQuarterlyPanel({
                                 </h4>
                             </div>
                             <span className="text-[10px] uppercase tracking-wide text-amber-800">
-                                Non fiscale · createdAt
+                                Non fiscale · createdAt · sola lettura
                             </span>
                         </div>
                         <div className="dashboard-table-scroll overflow-x-auto">
-                            <table className="w-full text-left text-xs min-w-[1280px]">
+                            <table className="w-full text-left text-xs min-w-[1180px]">
                                 <thead>
                                     <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 bg-white">
                                         <th className="px-3 py-2">Data</th>
@@ -600,14 +566,13 @@ export default function TaxQuarterlyPanel({
                                         <th className="px-3 py-2 text-right">Compenso</th>
                                         <th className="px-3 py-2">Liquidazione</th>
                                         <th className="px-3 py-2 text-right">Margine</th>
-                                        <th className="px-3 py-2">Azioni</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {report.rows.length === 0 ? (
                                         <tr>
                                             <td
-                                                colSpan={13}
+                                                colSpan={12}
                                                 className="px-4 py-10 text-center text-slate-400 italic"
                                             >
                                                 Nessun ordine nel periodo selezionato.
@@ -647,16 +612,6 @@ export default function TaxQuarterlyPanel({
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-mono">
                                                     {euro(r.netMarginCents)}
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditRow({ ...r })}
-                                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8b6914] hover:underline"
-                                                    >
-                                                        <Pencil size={12} />
-                                                        Modifica
-                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -834,156 +789,6 @@ export default function TaxQuarterlyPanel({
                 </>
                 ))}
 
-            {editRow && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4">
-                        <h4 className="text-base font-semibold text-slate-900">
-                            Modifica riga — {editRow.orderNumber}
-                            {editRow.hasReceipt ? (
-                                <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
-                                    Allineata a ricevuta
-                                </span>
-                            ) : null}
-                        </h4>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Lordo incassato (€)
-                            <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                value={(editRow.grossCents / 100).toFixed(2)}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        grossCents: Math.round(Number(e.target.value || 0) * 100),
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                            />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Fee gateway (€)
-                            <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                value={(editRow.gatewayFeeCents / 100).toFixed(2)}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        gatewayFeeCents: Math.round(
-                                            Number(e.target.value || 0) * 100
-                                        ),
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                            />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Compenso fiorista (€)
-                            <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                value={(editRow.floristCompensationCents / 100).toFixed(2)}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        floristCompensationCents: Math.round(
-                                            Number(e.target.value || 0) * 100
-                                        ),
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                            />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Aliquota IVA fiorista (0 = forfettario, 0.10, 0.22)
-                            <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                max={1}
-                                value={editRow.floristVatRate ?? ''}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        floristVatRate:
-                                            e.target.value === ''
-                                                ? null
-                                                : Number(e.target.value),
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                                placeholder="opzionale"
-                            />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Accessori lordi IVA 22% (€)
-                            <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                value={(editRow.accessoryGrossCents / 100).toFixed(2)}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        accessoryGrossCents: Math.round(
-                                            Number(e.target.value || 0) * 100
-                                        ),
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                            />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Stato liquidazione
-                            <select
-                                value={editRow.settlementStatus}
-                                onChange={(e) =>
-                                    setEditRow({
-                                        ...editRow,
-                                        settlementStatus: e.target.value as SettlementStatus,
-                                    })
-                                }
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                            >
-                                <option value="PENDING">Pending</option>
-                                <option value="BONIFICATO">Bonificato</option>
-                                <option value="RICEVUTA">Ricevuta</option>
-                            </select>
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-600">
-                            Note
-                            <textarea
-                                value={editRow.financeNotes || ''}
-                                onChange={(e) =>
-                                    setEditRow({ ...editRow, financeNotes: e.target.value })
-                                }
-                                rows={3}
-                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                            />
-                        </label>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button
-                                type="button"
-                                onClick={() => setEditRow(null)}
-                                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600"
-                            >
-                                Annulla
-                            </button>
-                            <button
-                                type="button"
-                                disabled={saving}
-                                onClick={() => void handleSaveEdit()}
-                                className="px-4 py-2 rounded-xl bg-[#c5a880] text-white text-xs font-bold uppercase tracking-wide disabled:opacity-60"
-                            >
-                                {saving ? 'Salvataggio…' : 'Salva su Neon'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

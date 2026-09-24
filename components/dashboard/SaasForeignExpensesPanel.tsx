@@ -139,12 +139,23 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Eliminare questa fattura SaaS?')) return;
-        const res = await fetch(`/api/dashboard/finance/saas-invoices/${id}`, { method: 'DELETE' });
+    const handleArchive = async (id: string) => {
+        const typed = window.prompt(
+            'Archiviazione soft: la fattura sparisce dalle liste ma i dati restano.\nDigita ARCHIVIA per confermare:'
+        );
+        if (typed == null) return;
+        if (typed.trim() !== 'ARCHIVIA') {
+            setError('Archiviazione annullata: digita esattamente ARCHIVIA.');
+            return;
+        }
+        const res = await fetch(`/api/dashboard/finance/saas-invoices/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirm: 'ARCHIVIA' }),
+        });
         const parsed = await readJsonResponse(res);
         if (!parsed.ok) {
-            setError(parsed.error || 'Eliminazione fallita');
+            setError(parsed.error || 'Archiviazione fallita');
             return;
         }
         await load();
@@ -486,11 +497,11 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                                             <td className="px-3 py-2 text-right">
                                                 <button
                                                     type="button"
-                                                    onClick={() => void handleDelete(inv.id)}
-                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200 text-rose-700 text-xs"
+                                                    onClick={() => void handleArchive(inv.id)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-200 text-amber-900 text-xs"
                                                 >
                                                     <Trash2 size={12} />
-                                                    Elimina
+                                                    Archivia
                                                 </button>
                                             </td>
                                         </tr>

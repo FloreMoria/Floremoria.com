@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
-    deleteSaasForeignInvoice,
+    archiveSaasForeignInvoice,
     getSaasInvoiceFile,
 } from '@/lib/financial/saasForeignInvoices';
 
 export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const ARCHIVE_CONFIRM = 'ARCHIVIA';
 
 export async function GET(_request: Request, ctx: Ctx) {
     const auth = await requireDashboardAdmin();
@@ -32,18 +34,39 @@ export async function GET(_request: Request, ctx: Ctx) {
     }
 }
 
-export async function DELETE(_request: Request, ctx: Ctx) {
+/**
+ * Soft-archive (non cancella blob né riga).
+ * Body obbligatorio: { "confirm": "ARCHIVIA" }
+ */
+export async function DELETE(request: NextRequest, ctx: Ctx) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
     const { id } = await ctx.params;
     try {
-        const ok = await deleteSaasForeignInvoice(id);
+        let confirm = '';
+        try {
+            const body = (await request.json()) as { confirm?: string };
+            confirm = typeof body?.confirm === 'string' ? body.confirm.trim() : '';
+        } catch {
+            confirm = '';
+        }
+        if (confirm !== ARCHIVE_CONFIRM) {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    error: `Conferma obbligatoria: digita ${ARCHIVE_CONFIRM} per archiviare (nessuna cancellazione).`,
+                },
+                { status: 400 }
+            );
+        }
+
+        const ok = await archiveSaasForeignInvoice(id);
         if (!ok) {
             return NextResponse.json({ ok: false, error: 'Fattura non trovata' }, { status: 404 });
         }
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ ok: true, archived: true });
     } catch (error) {
-        console.error('[saas-invoices DELETE]', error);
-        return NextResponse.json({ ok: false, error: 'Eliminazione fallita' }, { status: 500 });
+        console.error('[saas-invoices ARCHIVE]', error);
+        return NextResponse.json({ ok: false, error: 'Archiviazione fallita' }, { status: 500 });
     }
 }

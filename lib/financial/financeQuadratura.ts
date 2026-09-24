@@ -69,11 +69,15 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         await Promise.all([
         getFinecoManualBalance(),
         prisma.bankStatementLine.count({
-            where: { matchStatus: { not: 'MATCHED' } },
+            where: {
+                matchStatus: { not: 'MATCHED' },
+                document: { archivedAt: null },
+            },
         }),
         countFloristWaitingDocuments(),
         prisma.bankStatementDocument.findMany({
             where: {
+                archivedAt: null,
                 OR: [
                     { periodStart: { gte: yearStart, lt: yearEnd } },
                     { periodEnd: { gte: yearStart, lt: yearEnd } },
@@ -98,6 +102,7 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         }),
         prisma.bankStatementLine.aggregate({
             where: {
+                document: { archivedAt: null },
                 OR: [
                     { accountingDate: { gte: yearStart, lt: yearEnd } },
                     {

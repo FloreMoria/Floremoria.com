@@ -313,3 +313,14 @@ Entrambi i progetti falliscono sullo **stesso** errore all’ultimo commit `afd3
 3. `package.json` — `engines.node: 24.x` + `build: prisma generate && next build`
 
 Verifica «pubblicato»: solo Ready + Production su **floremoria-dashboard** (vedi `PROMEMORIA_DEPLOY.md`).
+
+## Cron doppi — chiusura 2026-09-24
+
+| Progetto | Cron | Stato verificato CLI/API |
+|----------|------|---------------------------|
+| **floremoria-dashboard** | 4 job (pinterest-daily, publish-campaigns, publish-campaigns-dispatch, vera-order-reminders) | **ATTIVI** (`disabledAt` = null) |
+| **floremoria** (secondario) | stessi 4 path in definizione | **DISATTIVATI** (`disabledAt` valorizzato; `vercel crons list` → `(disabled)`). Progetto **non** cancellato. |
+
+**Doppie esecuzioni (ultimi giorni):** non risultano Pin daily duplicati in `system_state` (un solo `pinterest_last_daily_pin_at` = 2026-09-21 09:00Z, `simulated:false`). Campagne social 14g: `externalId` unici nel campione. Rischio residuo era reale su **vera-order-reminders** (WhatsApp) e su race Pinterest se entrambi i cron partivano prima del lock 36h; ora il secondario non schedula più.
+
+**Nota:** un nuovo deploy su `floremoria` che ripubblica `vercel.json` *potrebbe* ripristinare i cron — dopo ogni deploy accidentale sul secondario, riverificare `vercel crons list` e che resti `(disabled)`.

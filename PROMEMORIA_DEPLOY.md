@@ -31,6 +31,15 @@ Il progetto Vercel `floremoria` (`floremoria.vercel.app`) **non** è il dominio 
 
 Se l’ultimo tentativo Production è **Error**, il sito può ancora servire un Ready **precedente**: va detto esplicitamente («live = SHA X; ultimo tentativo fallito = SHA Y»).
 
+### OK del titolare prima di pubblicare (obbligatorio)
+
+1. Mostrare sempre le modifiche proposte (file + diff sintetico).  
+2. **Aspettare OK esplicito** del titolare.  
+3. Solo dopo: commit/push o promote su **floremoria-dashboard**.  
+4. Confermare «pubblicato» solo con Ready + Production verificato (punto sopra).
+
+Eccezione: correzioni di sicurezza urgenti concordate a voce/chat nello stesso thread («pubblica subito»).
+
 ---
 
 ## 1. Pubblicazione in produzione (unica via)

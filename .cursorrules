@@ -13,6 +13,7 @@ Il prodotto reale è la presenza delegata e testimoniata, non il fiore.
 - Notifiche: code asincrone per email/WhatsApp/SMS (POSTMAN)
 - Agent AI: orchestrazione nel backend, mai nel frontend
 - **Produzione sito/dashboard:** Vercel progetto `floremoria-dashboard` → `www.floremoria.com` (vedi `PROMEMORIA_DEPLOY.md`). Il VPS Aruba non è il sito reale: non pubblicarci come se lo fosse.
+- **Prima di pubblicare su Vercel:** mostrare sempre le modifiche e **aspettare OK esplicito** del titolare. «Pubblicato» = solo deployment Ready + etichetta Production su `floremoria-dashboard`, verificato in CLI/pannello.
 
 ## Ruolo di Claude in Cursor
 CTO-Operatore ibrido. Non completare solo il codice richiesto: sfida le assunzioni, segnala rischi, proponi la versione scalabile.

@@ -285,6 +285,7 @@ Consiglio team: **prima le tre schede**; archiviati+ripristino subito dopo in Ar
 | **Registro ordini (PATCH tax-register / modifiche)** | **Admin e Super Admin** possono modificare tutto, ma ogni modifica deve essere **tracciata** (chi, quando, valore prima e dopo). | **Fase successiva** — non ora |
 | **Prossimo passo UI contabilità** | Prima le **3 schede + Archivio**. Vista «documenti archiviati» **rimandata**. | Piano semplificazione — scheletro UI |
 | **Spese R&S (startup innovativa)** | **Tracciare le spese di ricerca e sviluppo** (requisito startup innovativa), **da definire col commercialista**. | Futuro — non in Andamento/Fase 2 |
+| **Guard `isTest` su ledger / email** | Aggiungere controllo `isTest` alla scrittura contabile (ledger / webhook Stripe) e alle email operative/cliente post-pagamento, così gli ordini di prova non entrano in Prima Nota né in notifiche ops/cliente. **Proposta da mostrare al titolare prima di implementare.** | Futuro — non ora |
 | **Fase 2 UI eseguita** | Schede **Andamento / Da fare / Commercialista / Archivio** in produzione (`14e655ff`, Ready + Production su `floremoria-dashboard`). Solo riorganizzazione UI: avviso scadenze ≤10g solo in Da fare; autofatture storico sola lettura in Archivio (no generazione/upload). | **Eseguita 2026-09-24** |
 
 ## Fase 2 UI — chiusura 2026-09-24

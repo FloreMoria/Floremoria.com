@@ -110,6 +110,20 @@ export default function TerminiCondizioniPage() {
                     pubblicate nelle pagine Privacy Policy e Cookie Policy del sito.
                 </p>
 
+                <h2 id="foto-consegne" className="scroll-mt-28">
+                    10-bis. Fotografie di avvenuta consegna
+                </h2>
+                <p>
+                    La fotografia di conferma della consegna («foto dopo» la posa) fa parte del servizio come prova
+                    visiva dell&apos;avvenuta esecuzione. L&apos;eventuale uso promozionale di una copia in forma
+                    anonima, le misure di minimizzazione e il diritto di opporsi (anche tramite casella facoltativa al
+                    checkout o email) sono descritti nella{' '}
+                    <a href="/privacy#foto-consegne" className="text-fm-gold hover:underline">
+                        Privacy Policy — Fotografie di avvenuta consegna
+                    </a>
+                    .
+                </p>
+
                 <h2>11. Legge applicabile e foro competente</h2>
                 <p>
                     I presenti Termini sono regolati dalla legge italiana. Per i consumatori resta fermo il foro del luogo
@@ -124,7 +138,7 @@ export default function TerminiCondizioniPage() {
                 </p>
 
                 <p className="text-sm text-gray-500">
-                    Ultimo aggiornamento: 05 maggio 2026.
+                    Ultimo aggiornamento: 24 settembre 2026.
                 </p>
             </div>
         </div>

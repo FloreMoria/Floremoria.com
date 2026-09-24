@@ -1,9 +1,8 @@
 # MOMO — Foto consegne sui social (decisioni titolare + piano)
 
 > **Aggiornato:** 2026-09-24 (decisioni titolare)  
-> **Stato:** documentazione + verifiche sola lettura. **Nessuno sviluppo** senza OK.  
-> **Nessuna Fase 2 contabilità** senza OK.  
-> **Bozza testi legali:** `docs/momo-foto-consegne-testi-legali-bozza.md` (da far validare a Iubenda/avvocato).  
+> **Informativa foto consegne:** pubblicata sul sito il **24/09/2026** in `/privacy#foto-consegne` (e rinvio in `/termini-condizioni`) — **non** su Iubenda.  
+> **Testo fonte:** `docs/momo-foto-consegne-testi-legali-bozza.md`.  
 > **LIA (art. 6.1.f):** `docs/momo-foto-consegne-lia.md`.
 
 ---
@@ -13,7 +12,7 @@
 ### 1.1 Consenso — STRADA A (approvata)
 
 - **Nessun consenso obbligatorio** al checkout.
-- L’**informativa privacy** dichiara che le foto di consegna possono essere usate **in forma anonima** per la promozione del brand.
+- L’**informativa privacy sul sito** (`/privacy#foto-consegne`, pubblicata **24/09/2026**) dichiara che le foto di consegna possono essere usate **in forma anonima** per la promozione del brand.
 - Il cliente può **rifiutare** con:
   - casella **facoltativa** al checkout: «non usate le mie foto»; **oppure**
   - richiesta via email.

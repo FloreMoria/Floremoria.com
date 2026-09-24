@@ -1,8 +1,8 @@
 # Testi Legali Definitivi — Foto Consegne Anonime per Promozione Brand
 
-> **Stato:** Versione FINALE validata da **BARBARA** (Compliance & Privacy FloreMoria) su decisione del titolare.  
-> **Data di entrata in vigore & verifica:** 2026-09-24 (**valida solo se go-live lo stesso giorno**)  
-> **Decisione titolare:** Entrata in vigore immediata — Strada A (informativa privacy con base giuridica di legittimo interesse + casella facoltativa di opt-out al checkout).  
+> **Stato:** testo pubblicato sul sito il **24/09/2026** in `/privacy#foto-consegne` (non su Iubenda).  
+> **Data di entrata in vigore & verifica:** 2026-09-24  
+> **Decisione titolare:** Strada A — informativa sul sito + casella facoltativa di opt-out al checkout.  
 > **Regola Stock Storico / carosello:** vedi §4. **LIA:** `docs/momo-foto-consegne-lia.md`.
 
 ---
@@ -28,10 +28,10 @@ La presente policy e i relativi testi legali sono stati redatti e verificati da 
 
 ---
 
-## 2. Paragrafo per l'Informativa Privacy (Pronto per Iubenda)
+## 2. Paragrafo informativa privacy (pubblicato sul sito)
 
-> **Istruzioni per l'inserimento su Iubenda:**  
-> Copia il testo sottostante e incollalo come **Clausola Personalizzata** (Sezione: *Ulteriori informazioni sul trattamento dei Dati Personali* / *Finalità del Trattamento*) all'interno della dashboard di Iubenda per la Privacy Policy di FloreMoria.
+> **Pubblicato:** 24/09/2026 su `https://www.floremoria.com/privacy#foto-consegne` (non su Iubenda).  
+> Testo sotto = fonte della sezione on-site.
 
 ```markdown
 ### Fotografie di conferma della consegna e promozione del brand

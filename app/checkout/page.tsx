@@ -1106,7 +1106,7 @@ export default function CheckoutPage() {
                                                     <p className="text-[11px] text-gray-500 font-normal mt-0.5 leading-relaxed">
                                                         La consegna e la foto di conferma privata restano invariate. Usiamo le foto solo se anonimizzate (solo fiori, senza nomi o dettagli della tomba) e controllate dallo staff.{' '}
                                                         <a
-                                                            href="/privacy"
+                                                            href="/privacy#foto-consegne"
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-stone-700 underline hover:text-black font-medium"

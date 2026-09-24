@@ -5,7 +5,7 @@ import IubendaPrivacyEmbed from '@/components/legal/IubendaPrivacyEmbed';
 export const privacyPolicyMetadata: Metadata = {
     title: 'Privacy Policy | FloreMoria',
     description:
-        'Informativa privacy FloreMoria (GDPR), incluso uso delle Pinterest API, disclaimer di non affiliazione, cancellazione dati alla disconnessione e divieto di rivendita/redistribuzione.',
+        'Informativa privacy FloreMoria (GDPR): foto di consegna anonime, Pinterest API, diritti dell’interessato. Testo sul sito e documento Iubenda.',
     alternates: {
         canonical: 'https://www.floremoria.com/privacy',
     },
@@ -143,6 +143,85 @@ export default function PrivacyPolicyContent() {
                     or redistribute Pinterest content or Pinterest-derived data to third parties (including data
                     brokers), except where required by law or strictly necessary for infrastructure providers that
                     host our systems under confidentiality obligations.
+                </p>
+
+                <h2
+                    id="foto-consegne"
+                    className="text-xl font-display font-semibold text-gray-900 scroll-mt-28"
+                >
+                    Fotografie di avvenuta consegna (in forma anonima)
+                </h2>
+                <p>
+                    Nell&apos;ambito dell&apos;erogazione del servizio di omaggio e cura floreale, il fiorista partner
+                    incaricato realizza fotografie a testimonianza dell&apos;avvenuta posa («foto di conferma
+                    consegna»). Tali immagini sono trattate in primo luogo per finalità di esecuzione del contratto
+                    (fornire all&apos;acquirente la prova visiva della corretta esecuzione del servizio) e per la
+                    gestione di eventuali verifiche o contestazioni.
+                </p>
+                <p>
+                    FloreMoria S.r.l. può inoltre trattare una copia di tali fotografie, previa integrale e rigorosa
+                    anonimizzazione, per finalità di comunicazione istituzionale, promozione del servizio e
+                    documentazione dell&apos;arte floreale sui propri canali digitali (a titolo esemplificativo: sito
+                    web istituzionale, Pinterest, Instagram, Facebook e altri canali promozionali del brand).
+                </p>
+                <p>
+                    Per «fotografia anonimizzata» si intende un asset digitale nel quale:
+                </p>
+                <ol>
+                    <li>
+                        non sono in alcun modo presenti o riconoscibili persone, volti o ritratti (inclusi ritratti o
+                        fotografie di persone defunte);
+                    </li>
+                    <li>
+                        sono state rimosse, ritagliate o oscurate tutte le epigrafi, scritte, nomi, cognomi, date di
+                        nascita o morte, dediche su nastri o biglietti, numeri di loculo/campo, targhe e qualsiasi
+                        elemento architettonico, ornamentale o di contesto che consenta di ricondurre la sepoltura a
+                        una persona determinata o a un nucleo familiare;
+                    </li>
+                    <li>
+                        sono stati integralmente rimossi i metadati tecnici non necessari (quali coordinate
+                        geografiche GPS, data e ora esatta dello scatto, modello del dispositivo).
+                    </li>
+                </ol>
+                <p>
+                    <strong>Base giuridica del trattamento:</strong> legittimo interesse di FloreMoria S.r.l. (art. 6,
+                    par. 1, lett. f, GDPR) alla promozione, documentazione e valorizzazione qualitativa dei propri
+                    servizi sul mercato, adeguatamente bilanciato con i diritti e le libertà fondamentali degli
+                    interessati mediante l&apos;adozione preventiva di rigorose misure tecniche di anonimizzazione e
+                    controllo umano. Ove la fotografia risulti irreversibilmente priva di dati identificativi, la
+                    normativa in materia di protezione dei dati personali non è applicabile all&apos;asset. Resta
+                    pienamente impregiudicata la disciplina di cui all&apos;art. 2-terdecies del D.Lgs. 196/2003 in
+                    materia di diritti riguardanti le persone decedute, esercitabili da chi vi abbia un interesse
+                    proprio o agisca a tutela dell&apos;interessato.
+                </p>
+                <p>
+                    <strong>Diritto di opposizione e rifiuto (opt-out):</strong> l&apos;utente può opporsi in qualsiasi
+                    momento all&apos;utilizzo promozionale delle fotografie relative al proprio ordine, senza alcun
+                    costo e senza alcun pregiudizio per la regolare esecuzione della consegna floreale, mediante:
+                </p>
+                <ul>
+                    <li>
+                        la selezione dell&apos;apposita casella facoltativa in fase di checkout sul sito web («Non
+                        usate le foto della mia consegna, nemmeno in forma anonima»); oppure
+                    </li>
+                    <li>
+                        l&apos;invio di una comunicazione via email all&apos;indirizzo{' '}
+                        <a href="mailto:assistenza@floremoria.com" className="text-fm-gold hover:underline">
+                            assistenza@floremoria.com
+                        </a>{' '}
+                        (o all&apos;indirizzo privacy indicato in informativa), indicando il numero d&apos;ordine di
+                        riferimento.
+                    </li>
+                </ul>
+                <p>
+                    In caso di opposizione o rifiuto, le fotografie dell&apos;ordine non saranno in alcun caso
+                    inserite nei flussi promozionali né pubblicate sui canali social o sul sito, restando conservate
+                    esclusivamente nel canale privato dell&apos;ordine quale prova di consegna per l&apos;adempimento
+                    contrattuale.
+                </p>
+                <p>
+                    Nessuna fotografia viene pubblicata in modo automatizzato: ogni singolo contenuto è
+                    preventivamente esaminato e approvato da personale autorizzato di FloreMoria S.r.l.
                 </p>
             </section>
 

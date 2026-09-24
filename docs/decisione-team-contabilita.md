@@ -283,10 +283,15 @@ Consiglio team: **prima le tre schede**; archiviati+ripristino subito dopo in Ar
 |------|-----------|------|
 | **VPS Aruba** | **Si tiene.** Prima di qualunque intervento futuro sul VPS: **salvare il database Postgres locale**. | Operativo / PETRA |
 | **Registro ordini (PATCH tax-register / modifiche)** | **Admin e Super Admin** possono modificare tutto, ma ogni modifica deve essere **tracciata** (chi, quando, valore prima e dopo). | **Fase successiva** — non ora |
-| **Prossimo passo UI contabilità** | Prima le **3 schede + Archivio**. Vista «documenti archiviati» **rimandata**. | Piano semplificazione (scheletro UI) — **non** iniziata in questo addendum |
+| **Prossimo passo UI contabilità** | Prima le **3 schede + Archivio**. Vista «documenti archiviati» **rimandata**. | Piano semplificazione — scheletro UI |
 | **Spese R&S (startup innovativa)** | **Tracciare le spese di ricerca e sviluppo** (requisito startup innovativa), **da definire col commercialista**. | Futuro — non in Andamento/Fase 2 |
+| **Fase 2 UI eseguita** | Schede **Andamento / Da fare / Commercialista / Archivio** in produzione (`14e655ff`, Ready + Production su `floremoria-dashboard`). Solo riorganizzazione UI: avviso scadenze ≤10g solo in Da fare; autofatture storico sola lettura in Archivio (no generazione/upload). | **Eseguita 2026-09-24** |
 
-**Non iniziare la Fase 2** del piano semplificazione in questa sessione.
+## Fase 2 UI — chiusura 2026-09-24
+
+**Stato: eseguita** (deploy Production `dpl_Bjav2CBwdka3TnNYpky8HtStZiLg`, commit `14e655ff`).
+
+Non iniziata in questo addendum: Fase 3 (ZIP), Fase 4 (margini), vista «documenti archiviati».
 
 ## Diagnosi deploy Vercel (CLI, non ipotesi)
 

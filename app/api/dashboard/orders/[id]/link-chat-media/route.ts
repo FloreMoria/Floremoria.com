@@ -1,10 +1,13 @@
 /**
- * POST /api/dashboard/orders/[orderId]/link-chat-media
+ * POST /api/dashboard/orders/[id]/link-chat-media
  * Collega una foto ricevuta in chat (WhatsApp/Telegram/Hub) a un ordine specifico,
  * creando/aggiornando DeliveryProof e propagando a cascata la foto su:
  * - Scheda Defunto (DeceasedProfile.deliveryPhotoUrls + cover)
  * - Registro Fiorista & Scheda Partner
  * - Giardino della Memoria & Bacheca Utente
+ *
+ * Nota: lo slug deve chiamarsi `[id]` come le altre route sotto orders/
+ * (Next.js non ammette slug diversi allo stesso livello di path).
  */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -20,10 +23,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
     request: NextRequest,
-    context: { params: Promise<{ orderId: string }> }
+    context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
     try {
-        const { orderId } = await context.params;
+        const { id: orderId } = await context.params;
         const cleanOrderId = orderId?.trim();
 
         if (!cleanOrderId) {

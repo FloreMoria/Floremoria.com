@@ -284,6 +284,7 @@ Consiglio team: **prima le tre schede**; archiviati+ripristino subito dopo in Ar
 | **VPS Aruba** | **Si tiene.** Prima di qualunque intervento futuro sul VPS: **salvare il database Postgres locale**. | Operativo / PETRA |
 | **Registro ordini (PATCH tax-register / modifiche)** | **Admin e Super Admin** possono modificare tutto, ma ogni modifica deve essere **tracciata** (chi, quando, valore prima e dopo). | **Fase successiva** — non ora |
 | **Prossimo passo UI contabilità** | Prima le **3 schede + Archivio**. Vista «documenti archiviati» **rimandata**. | Piano semplificazione (scheletro UI) — **non** iniziata in questo addendum |
+| **Spese R&S (startup innovativa)** | **Tracciare le spese di ricerca e sviluppo** (requisito startup innovativa), **da definire col commercialista**. | Futuro — non in Andamento/Fase 2 |
 
 **Non iniziare la Fase 2** del piano semplificazione in questa sessione.
 

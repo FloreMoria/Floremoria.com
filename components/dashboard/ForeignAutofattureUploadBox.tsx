@@ -74,6 +74,11 @@ function periodKeyFromIsoDate(iso: string): PrimaNotaPeriodKey {
 
 type Props = {
     onImported?: () => void;
+    /**
+     * `history-readonly` (Fase 2): solo storico autofatture già create.
+     * Niente generazione XML/PDF né upload. Codice genera/upload resta nel file.
+     */
+    variant?: 'full' | 'history-readonly';
 };
 
 type IngestSummary = {
@@ -162,7 +167,11 @@ function autofatturaSearchHaystack(h: AutofatturaHistoryItem): string {
         .join(' ');
 }
 
-export default function ForeignAutofattureUploadBox({ onImported }: Props) {
+export default function ForeignAutofattureUploadBox({
+    onImported,
+    variant = 'full',
+}: Props) {
+    const readOnlyHistory = variant === 'history-readonly';
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [generating, setGenerating] = useState(false);
@@ -596,12 +605,24 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
                         Autofatture estere
+                        {readOnlyHistory ? (
+                            <span className="ml-2 font-sans font-semibold normal-case tracking-normal text-slate-400">
+                                (storico sola lettura)
+                            </span>
+                        ) : null}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                        Genera XML FatturaPA FPR12 TD17/TD18 (SDI <span className="font-mono">K0ROACV</span>,
-                        SoggettoEmittente CC) pronto per YouDOX, oppure carica XML/ZIP/PDF già
-                        emessi.
+                        {readOnlyHistory
+                            ? 'Consultazione delle autofatture già create. Generazione e upload sono disattivati in UI (Fase 2) — li gestisce il commercialista.'
+                            : (
+                                <>
+                                    Genera XML FatturaPA FPR12 TD17/TD18 (SDI{' '}
+                                    <span className="font-mono">K0ROACV</span>, SoggettoEmittente CC)
+                                    pronto per YouDOX, oppure carica XML/ZIP/PDF già emessi.
+                                </>
+                            )}
                     </p>
+                    {!readOnlyHistory ? (
                     <button
                         type="button"
                         onClick={() => setPaypalForeignOpen(true)}
@@ -610,10 +631,12 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                         <WalletCards size={14} />
                         Rendiconto fornitori esteri (PayPal)
                     </button>
+                    ) : null}
                 </div>
             </div>
 
-            {/* Generatore */}
+            {/* Generatore — nascosto in history-readonly (codice resta) */}
+            {!readOnlyHistory ? (
             <div className="rounded-xl border border-slate-200 bg-indigo-50/30 p-3 space-y-2 shrink-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                     Creazione rapida XML
@@ -680,6 +703,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     22% in reverse charge · XML YouDOX + PDF leggibile · Contabilità + Fineco
                 </p>
             </div>
+            ) : null}
 
             {/* Storico autofatture */}
             <div className="rounded-xl border border-slate-200 overflow-hidden flex flex-col flex-1 min-h-0">
@@ -924,6 +948,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                                         )}
                                                         XML
                                                     </button>
+                                                    {!readOnlyHistory ? (
                                                     <button
                                                         type="button"
                                                         title="Elimina"
@@ -933,6 +958,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                                     >
                                                         <Trash2 size={11} />
                                                     </button>
+                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>
@@ -967,7 +993,8 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 )}
             </div>
 
-            {/* Upload PDF/immagine: meta obbligatori visibili */}
+            {/* Upload — nascosto in history-readonly (codice resta) */}
+            {!readOnlyHistory ? (
             <div className="space-y-2 shrink-0 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Carica XML / ZIP / PDF o immagine
@@ -1091,6 +1118,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     />
                 </div>
             </div>
+            ) : null}
 
             {(message || error || summary) && (
                 <div className="shrink-0 max-h-[56px] overflow-y-auto space-y-1">

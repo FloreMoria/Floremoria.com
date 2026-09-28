@@ -96,13 +96,50 @@ export function hasMiniAppThread(session: ChatSession): boolean {
 export function isWarmPraiseThanks(message: string): boolean {
     const m = normalize(message);
     if (!m.includes('grazie')) return false;
+    // Se c'è una domanda o richiesta operativa, NON è un semplice ringraziamento di elogio
+    if (message.includes('?')) return false;
+    if (
+        hasAny(m, [
+            'foto',
+            'posa',
+            'ordine',
+            'whatsapp',
+            'consegna',
+            'quando',
+            'come',
+            'dove',
+            'quanto',
+            'prezzo',
+            'costo',
+            'pianta',
+            'bouquet',
+            'vaso',
+            'arrivano',
+            'arriveranno',
+            'inviate',
+            'ricevo',
+            'ricevero',
+            'posso',
+            'vorrei',
+            'offrite',
+            'servizio',
+        ])
+    ) {
+        return false;
+    }
     return (
         m.includes('fantastic') ||
+        m.includes('bravissim') ||
         m.includes('brav') ||
+        m.includes('gentilissim') ||
         m.includes('gentil') ||
         m.includes('perfett') ||
-        m.includes('aiuto') ||
-        m.length > 28
+        m.includes('splendid') ||
+        m.includes('meraviglios') ||
+        m.includes('grazie di cuore') ||
+        m.includes('grazie mille') ||
+        m.includes('mille grazie') ||
+        m.includes('grazie davvero')
     );
 }
 
@@ -206,12 +243,96 @@ export function buildAccessoryPriceReply(message: string, session: ChatSession):
     );
 }
 
-export function isCemeteryCoverageQuestion(message: string): boolean {
+export function isCemeteryCoverageQuestion(message: string, session?: ChatSession | null): boolean {
     const m = normalize(message);
     if (!hasAny(m, ['cimitero', 'cimiteri', 'tomba', 'tombe'])) return false;
+
+    // Se il messaggio contiene già dettagli specifici di luogo, cimitero comunale o comune, NON è una domanda di copertura generica
+    if (
+        hasAny(m, [
+            'cimitero comunale',
+            'cimitero monumentale',
+            'cimitero di',
+            'cimitero a',
+            'sepolt',
+            'tomba di',
+            'comune di',
+            'foggia',
+            'bologna',
+            'torremaggiore',
+            'milano',
+            'roma',
+            'napoli',
+            'torino',
+            'palermo',
+            'genova',
+            'firenze',
+            'bari',
+            'catania',
+            'verona',
+            'messina',
+            'padova',
+            'trieste',
+        ]) ||
+        /\bcimitero\s+[a-zÀ-ÿ]{3,}/i.test(message)
+    ) {
+        return false;
+    }
+
+    // Se l'utente fa domande specifiche (fiori secchi, togliere, piante in vaso, durata, prezzi, pulizia)
+    if (
+        hasAny(m, [
+            'secc',
+            'togliere',
+            'puliz',
+            'piant',
+            'vaso',
+            'durin',
+            'durata',
+            'quanto',
+            'prezzo',
+            'costo',
+            'abbonament',
+            'bouquet',
+            'omaggio',
+        ])
+    ) {
+        return false;
+    }
+
+    // Se nello storico recente è già stato spiegato il servizio di copertura cimiteri, lascia a Gemini
+    if (session?.messages?.length) {
+        const recentOutbound = session.messages
+            .filter((msg) => msg.direction === 'OUTBOUND')
+            .slice(-4);
+        if (
+            recentOutbound.some((msg) =>
+                msg.body?.includes('specializzati nella consegna direttamente all\'interno di qualsiasi cimitero')
+            )
+        ) {
+            return false;
+        }
+    }
+
     return (
-        hasAny(m, ['consegnate', 'consegna', 'consegnate in', 'qualsiasi cimitero', 'lontano', 'abito lontano']) ||
-        (m.includes('?') && hasAny(m, ['consegna', 'consegnate', 'copertura']))
+        hasAny(m, [
+            'consegnate in tutta italia',
+            'qualsiasi cimitero',
+            'coprite tutti i cimiteri',
+            'arrivate in tutti i cimiteri',
+            'consegnate nei cimiteri',
+            'consegnate al cimitero',
+            'consegnate in cimitero',
+        ]) ||
+        (m.includes('?') &&
+            hasAny(m, [
+                'consegnate anche',
+                'arrivate anche',
+                'coprite anche',
+                'consegnate nei cimiteri',
+                'consegnate in cimitero',
+                'consegna al cimitero',
+            ]))
     );
 }
 

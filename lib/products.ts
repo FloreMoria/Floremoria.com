@@ -50,7 +50,7 @@ const productsRaw: Omit<Product, 'images'>[] = [
         price: 37.99,
         description: "Pianta fiorita per un omaggio curato dai fioristi locali.",
         isBouquet: true,
-        category: 'funerale',
+        category: 'cimitero',
         descriptionSEO: "Resistenza, colore e sobrietà. Una pianta fiorita pensata per un omaggio che resti nel tempo, curata dai fioristi locali per garantire vigore e bellezza. Verifica fotografica della consegna su WhatsApp."
     },
     {
@@ -60,7 +60,7 @@ const productsRaw: Omit<Product, 'images'>[] = [
         price: 39.99,
         description: "Un omaggio duraturo e luminoso, simbolo di purezza e semplicità.",
         isBouquet: true,
-        category: 'funerale',
+        category: 'cimitero',
         descriptionSEO: "La vita che continua nel ricordo attraverso una pianta curata. Un omaggio duraturo e luminoso, simbolo di purezza e semplicità. Ideale per una presenza costante nel luogo del ricordo. Foto della posa inclusa."
     },
     {

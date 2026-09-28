@@ -169,24 +169,42 @@ function getDisplayNameFromSession(session: ChatSession, callerContext?: VeraCal
 }
 
 function sanitizeVeraReplyText(text: string): string {
-    const cleaned = text
-        .split('\n')
-        .filter((line) => {
-            const l = line.trim();
-            if (!l) return true;
-            const lower = l.toLowerCase();
-            if (lower.startsWith('" ->') || lower.startsWith('->')) return false;
-            if (lower === '*' || lower.startsWith('* ')) return false;
-            if (/^(wait|let'?s|note:|thinking|output:)/i.test(l)) return false;
-            if (/wait.*respectful/i.test(l)) return false;
-            if (/^["'].*["']$/.test(l) && l.length < 80) return false;
-            return true;
-        })
+    if (!text) return '';
+
+    let cleaned = text;
+
+    // 1. Rimuovi blocchi di ragionamento o meta-commentary tra parentesi o tra parentesi quadre
+    // es: (No formal closing needed...), (Nessun commiato...), [System instruction...], [Note: ...]
+    cleaned = cleaned.replace(/\((?:no formal closing|nessun commiato|nessuna chiusura|note:|prompt:|system instruction|meta:)[^)]*\)/gi, '');
+    cleaned = cleaned.replace(/\[(?:system instruction|note|prompt|meta)[^\]]*\]/gi, '');
+
+    // 2. Rimuovi prefissi di ruolo o label markdown di turno all'inizio delle righe
+    // es: *Of message*: , **Risposta:**, *Risposta*, Assistant:, Model:, VERA:, FloreMoria Staff:
+    cleaned = cleaned.replace(/^[\s*_-]*(?:of message|risposta|messaggio|testo risposta|output|floremoria staff|vera|assistant|model)[\s*_-]*:\s*/gim, '');
+
+    // 3. Filtra righe che contengono istruzioni di sistema o leakage
+    const lines = cleaned.split('\n').filter((line) => {
+        const l = line.trim();
+        if (!l) return true;
+        const lower = l.toLowerCase();
+        if (lower.startsWith('" ->') || lower.startsWith('->')) return false;
+        if (lower === '*' || lower.startsWith('* ')) return false;
+        if (/^(wait|let'?s|note:|thinking|output:|system_instruction|user_message)/i.test(l)) return false;
+        if (/wait.*respectful/i.test(l)) return false;
+        if (/^["'].*["']$/.test(l) && l.length < 80) return false;
+        if (/^\((?:no formal|nessun saluto|nessun commiato).*\)$/i.test(l)) return false;
+        return true;
+    });
+
+    cleaned = lines
         .join('\n')
-        .replace(/^["']\s*/gm, '')
-        .replace(/\s*["']$/gm, '')
+        .replace(/^["'«“]\s*/gm, '')
+        .replace(/\s*["'»”]$/gm, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+
+    // 4. Rimuovi eventuali istruzioni residue appese alla fine tra parentesi
+    cleaned = cleaned.replace(/\s*\([^)]*(?:formal closing|saluto formale|commiato|istruzioni|linee guida)[^)]*\)\s*$/gi, '').trim();
 
     // Scarta risposte quasi vuote o solo link dopo pulizia
     if (!cleaned || cleaned.replace(/https?:\/\/\S+/g, '').trim().length < 3) {
@@ -933,7 +951,7 @@ export async function generateVeraReply(
     }
 
     // ── Copertura consegna cimiteri ───────────────────────────────────────────
-    if (isCemeteryCoverageQuestion(message)) {
+    if (isCemeteryCoverageQuestion(message, session)) {
         return {
             text: buildCemeteryCoverageReply(session),
             source: 'deterministic',

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 27 Settembre 2026"
 sync_source: docs/verbali/27-09-2026.md
-synced_at: 2026-09-28T13:36:16.439Z
+synced_at: 2026-09-28T21:56:58.862Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -16,7 +16,8 @@ synced_at: 2026-09-28T13:36:16.439Z
 
 ## Sezione 1 — Infrastruttura
 
-- `d31e309` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
+- `d31e309c` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
+- `d742147a` chore(verbali): [skip ci] pipeline BARBARA + DEVIN → Obsidian _(github-actions[bot])_
 
 ## Sezione 2 — Strategia
 

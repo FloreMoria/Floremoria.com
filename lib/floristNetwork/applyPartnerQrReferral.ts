@@ -39,6 +39,18 @@ export async function applyPartnerQrReferralOnPaid(input: {
     orderId: string;
     sessionToken: string | null | undefined;
 }): Promise<ApplyPartnerQrReferralResult> {
+    const orderMeta = await prisma.order.findUnique({
+        where: { id: input.orderId },
+        select: { isTest: true },
+    });
+    if (orderMeta?.isTest === true) {
+        console.info('[florist-network] QR referral: test order, no referral fee', {
+            orderId: input.orderId,
+        });
+        await clearPartnerQrSessionFlag(input.orderId);
+        return { status: 'skipped', reason: 'test_order' };
+    }
+
     const token = (input.sessionToken || '').trim();
     if (!token) {
         return { status: 'skipped', reason: 'no_session_token' };

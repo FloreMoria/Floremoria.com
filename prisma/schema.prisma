@@ -203,6 +203,11 @@ model Order {
   funeralDate            DateTime?
   latitude               Float?
   longitude              Float?
+  /**
+   * Fiorista che FloreMoria paga per l'esecuzione:
+   * Leader se esegue o sub-delega; l'esecutore stesso se ha contratto diretto.
+   * (Rete Partner/Leader — non confondere con referralFloristId / executorFloristId.)
+   */
   partnerId              String?
   /**
    * Agenzia funebre B2B collegata (Partner.partnerType = FUNERAL_AGENCY).
@@ -290,8 +295,9 @@ model Order {
    */
   stripeTransactionId    String?           @unique @map("stripe_transaction_id") @db.VarChar(255)
   /**
-   * Compenso fiorista concordato (centesimi) — stessa fonte di Vera WhatsApp.
+   * Compenso di Esecuzione (centesimi) — unica fonte; stessa usata da Vera WhatsApp.
    * Se null, si calcola da listino/note e si può congelare al primo invio.
+   * Non duplicare con altri campi euro/Decimal.
    */
   floristCompensationCents Int?            @map("florist_compensation_cents")
   /** Aliquota IVA applicabile al compenso fiorista (es. 0 forfettario, 0.10, 0.22). */
@@ -307,10 +313,46 @@ model Order {
   isTest                 Boolean           @default(false) @map("is_test")
   customerReceipts       CustomerOrderReceipt[]
 
+  /**
+   * Rete Fioristi Partner/Leader — referral QR (Art. 2.3: una scansione → al più un ordine con fee).
+   * Tariffe default in SystemState (`florist_network.qr_fee_cents`, `florist_network.coordination_percent`);
+   * i centesimi sotto sono lo snapshot congelato sull'ordine al momento del calcolo.
+   */
+  referralFloristId      String?           @map("referral_florist_id")
+  referralFlorist        Partner?          @relation("OrderReferralFlorist", fields: [referralFloristId], references: [id], onDelete: SetNull)
+  /** Unico legame scansione→ordine; la relazione inversa è FloristScanEvent.order. */
+  referralScanEventId    String?           @unique @map("referral_scan_event_id")
+  referralScanEvent      FloristScanEvent? @relation(fields: [referralScanEventId], references: [id], onDelete: SetNull)
+  /** Fee QR congelata (centesimi), default 0. */
+  referralFeeCents       Int               @default(0) @map("referral_fee_cents")
+  /**
+   * Chi esegue materialmente, SOLO se diverso da partnerId
+   * (serve per contare i 10 ordini del delegato).
+   */
+  executorFloristId      String?           @map("executor_florist_id")
+  executorFlorist        Partner?          @relation("OrderExecutorFlorist", fields: [executorFloristId], references: [id], onDelete: SetNull)
+  /**
+   * Leader che riceve il coordinamento (es. 10%), SOLO quando l'esecuzione non è sua.
+   */
+  coordinatorFloristId   String?           @map("coordinator_florist_id")
+  coordinatorFlorist     Partner?          @relation("OrderCoordinatorFlorist", fields: [coordinatorFloristId], references: [id], onDelete: SetNull)
+  /** Fee coordinamento congelata (centesimi), default 0. */
+  coordinationFeeCents   Int               @default(0) @map("coordination_fee_cents")
+  assignedAt             DateTime?         @map("assigned_at")
+  acceptDeadlineAt       DateTime?         @map("accept_deadline_at")
+  acceptedAt             DateTime?         @map("accepted_at")
+  rejectedAt             DateTime?         @map("rejected_at")
+  cancellationCause      OrderCancellationCause? @map("cancellation_cause")
+  /** Penale (centesimi), default 0. */
+  penaltyCents           Int               @default(0) @map("penalty_cents")
+
   @@index([externalAnnouncementId])
   @@index([legacyOrderNumber])
   @@index([masterPartnerId])
   @@index([apiCredentialId])
+  @@index([referralFloristId])
+  @@index([executorFloristId])
+  @@index([coordinatorFloristId])
 }
 
 model OrderItem {
@@ -469,10 +511,41 @@ enum PartnerType {
   AGGREGATOR
 }
 
+/** Ruolo nella rete fioristi Partner/Leader (solo partnerType = FLORIST). */
+enum FloristNetworkRole {
+  LEADER
+  PARTNER
+  EXECUTOR
+}
+
+/** Stato accredito/contratto rete fioristi. */
+enum FloristNetworkStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ENDED
+}
+
+/** Causa cancellazione ordine (rete / operatività). */
+enum OrderCancellationCause {
+  CUSTOMER
+  FLORIST
+  FLOREMORIA
+  OTHER
+}
+
 model Partner {
   id              String                  @id @default(cuid())
   coverageArea    String?
   address         String?
+  /** Città sede (rete fioristi). */
+  city            String?                 @db.VarChar(120)
+  /** Telefono generico; WhatsApp resta in whatsappNumber. */
+  phone           String?                 @db.VarChar(40)
+  /**
+   * Slug URL pubblico (es. battistella). Codice parlante = uniqueCode (es. FS-PN-001).
+   */
+  slug            String?                 @unique @db.VarChar(80)
   activeOrders    Int                     @default(0)
   adminRating     Float                   @default(5.0)
   internalNotes   String?
@@ -522,10 +595,30 @@ model Partner {
   stripeConnectChargesEnabled Boolean?    @map("stripe_connect_charges_enabled")
   stripeConnectPayoutsEnabled Boolean?    @map("stripe_connect_payouts_enabled")
   stripeConnectVerifiedAt DateTime?       @map("stripe_connect_verified_at")
+
+  /** Ruolo rete Leader/Partner/Esecutore (null = fuori rete / legacy). */
+  networkRole     FloristNetworkRole?     @map("network_role")
+  /** Stato accredito rete (null = fuori rete / legacy). */
+  networkStatus   FloristNetworkStatus?   @map("network_status")
+  /** Leader che coordina questo Partner/Esecutore. */
+  leaderId        String?                 @map("leader_id")
+  leader          Partner?                @relation("FloristLeaderMembers", fields: [leaderId], references: [id], onDelete: SetNull)
+  ledPartners     Partner[]               @relation("FloristLeaderMembers")
+  directContractAt DateTime?              @map("direct_contract_at")
+  contractSignedAt DateTime?              @map("contract_signed_at")
+  contractEndedAt  DateTime?              @map("contract_ended_at")
+  assignedRegion  String?                 @map("assigned_region") @db.VarChar(120)
+  assignedProvinces String[]              @default([]) @map("assigned_provinces")
+  preferredCities String[]                @default([]) @map("preferred_cities")
+
   orders          Order[]                 @relation("OrderFloristPartner")
   agencyOrders    Order[]                 @relation("OrderFuneralAgency")
   referralOrders  Order[]                 @relation("OrderReferralPartner")
   masterOrders    Order[]                 @relation("OrderMasterPartner")
+  qrReferralOrders Order[]                @relation("OrderReferralFlorist")
+  executorOrders  Order[]                 @relation("OrderExecutorFlorist")
+  coordinatorOrders Order[]               @relation("OrderCoordinatorFlorist")
+  scanEvents      FloristScanEvent[]
   deliveryProofs  DeliveryProof[]
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
@@ -539,6 +632,31 @@ model Partner {
   @@index([partnerType, deletedAt])
   @@index([defaultFloristId])
   @@index([masterPartnerId])
+  @@index([leaderId])
+  @@index([networkStatus])
+}
+
+/**
+ * Scansione QR Partner (Art. 2.3): una sessione di navigazione avviata dalla scansione.
+ * Una sola scansione → al più un ordine con fee (Order.referralScanEventId unique).
+ * Nessun periodo di validità in giorni.
+ */
+model FloristScanEvent {
+  id           String   @id @default(cuid())
+  floristId    String   @map("florist_id")
+  /** Restrict: le scansioni sono prova delle fee; i fioristi si disattivano, non si cancellano. */
+  florist      Partner  @relation(fields: [floristId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now()) @map("created_at")
+  /** Hash dell'IP — mai IP in chiaro. */
+  ipHash       String?  @map("ip_hash") @db.VarChar(64)
+  userAgent    String?  @map("user_agent") @db.VarChar(512)
+  /** Valore cookie di sessione; univoco. */
+  sessionToken String   @unique @map("session_token") @db.VarChar(64)
+  /** Relazione inversa: Order.referralScanEventId (unico legame scansione→ordine). */
+  order        Order?
+
+  @@index([floristId, createdAt])
+  @@map("florist_scan_events")
 }
 
 /**
@@ -1322,5 +1440,25 @@ model AiAuditSnapshot {
 
   @@index([runAt(sort: Desc)])
   @@map("ai_audit_snapshots")
+}
+
+/**
+ * Audit campi Admin/Super Admin: chi, quando, valore prima/dopo.
+ * Usato per Partner rete e campi fee/assegnazione Order (wiring API in operazioni successive).
+ */
+model AdminFieldChangeLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  actorUserId String   @map("actor_user_id")
+  actorRole   String   @map("actor_role") @db.VarChar(40)
+  entityType  String   @map("entity_type") @db.VarChar(64)
+  entityId    String   @map("entity_id")
+  field       String   @db.VarChar(120)
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("admin_field_change_logs")
 }
 

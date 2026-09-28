@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy, Calendar as CalendarIcon, Table, Pencil, Trash2 } from 'lucide-react';
+import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy, Calendar as CalendarIcon, Table, Pencil, Trash2, QrCode } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
@@ -24,6 +24,7 @@ import DeliveryCountdownBadge from '@/components/dashboard/DeliveryCountdownBadg
 import type { ProfileUserType } from '@prisma/client';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName, compareBySurname } from '@/lib/utils/formatPersonName';
+import { formatQrOriginTooltip } from '@/lib/floristNetwork/qrAdminViews';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -52,6 +53,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [filterSearch, setFilterSearch] = useState('');
     const [filterDate, setFilterDate] = useState('tutti');
+    const [filterQrOnly, setFilterQrOnly] = useState(false);
 
     const [localOrders, setLocalOrders] = useState<any[]>(orders);
     const [localAbandonedOrders, setLocalAbandonedOrders] = useState<any[]>(abandonedOrders);
@@ -398,6 +400,10 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
         });
     }
 
+    if (filterQrOnly) {
+        filteredOrders = filteredOrders.filter((o) => Boolean(o.referralFloristId));
+    }
+
     // Sort Logic
     filteredOrders = filteredOrders.sort((a, b) => {
         let cmp = 0;
@@ -656,6 +662,18 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                             </select>
                         </div>
                     </div>
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={filterQrOnly}
+                                onChange={(e) => setFilterQrOnly(e.target.checked)}
+                                className="rounded border-gray-300 text-violet-700 focus:ring-violet-500"
+                            />
+                            <QrCode size={14} className="text-violet-600" />
+                            Solo ordini da QR
+                        </label>
+                    </div>
                 </div>
             )}
 
@@ -751,7 +769,22 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                             <div suppressHydrationWarning className="text-gray-500 text-[11px] uppercase tracking-wider mb-0.5 whitespace-nowrap">
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
-                                            <div className="font-bold text-black text-[14px] whitespace-nowrap">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
+                                            <div className="font-bold text-black text-[14px] whitespace-nowrap flex items-center gap-1.5">
+                                                <span>
+                                                    {order.orderNumber ||
+                                                        `#${order.id.substring(order.id.length - 6).toUpperCase()}`}
+                                                </span>
+                                                {order.referralFloristId ? (
+                                                    <span
+                                                        className="inline-flex items-center justify-center text-violet-700"
+                                                        title={formatQrOriginTooltip(order)}
+                                                        aria-label={formatQrOriginTooltip(order)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <QrCode size={14} strokeWidth={2.25} />
+                                                    </span>
+                                                ) : null}
+                                            </div>
                                             {order.isTest ? (
                                                 <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded inline-block">
                                                     {order.partnershipChannel === 'ANNUNCI_FUNEBRI'

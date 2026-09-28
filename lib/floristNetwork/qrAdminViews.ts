@@ -60,6 +60,41 @@ export function resolveQrFeeStatus(order: {
     return { kind: 'none', label: 'nessuna fee' };
 }
 
+/**
+ * Tooltip lista ordini (Art. 7.2: solo fiorista + stato fee, zero PII acquirente).
+ * Esempi: "QR Battistella – fee valida" / "QR Battistella – escluso – test".
+ */
+export function formatQrOriginTooltip(order: {
+    isTest?: boolean | null;
+    status?: OrderStatus | string | null;
+    cancellationCause?: OrderCancellationCause | string | null;
+    referralFeeCents?: number | null;
+    deletedAt?: Date | string | null;
+    referralFlorist?: {
+        shopName?: string | null;
+        ownerName?: string | null;
+        uniqueCode?: string | null;
+        slug?: string | null;
+    } | null;
+}): string {
+    const florist =
+        order.referralFlorist?.shopName ||
+        order.referralFlorist?.ownerName ||
+        order.referralFlorist?.uniqueCode ||
+        order.referralFlorist?.slug ||
+        'fiorista';
+    const shortName =
+        florist
+            .replace(/^Fioreria\s+/i, '')
+            .replace(/\s*s\.?\s*r\.?\s*l\.?\s*$/i, '')
+            .trim() || florist;
+    const fee = resolveQrFeeStatus(order);
+    if (fee.kind === 'valid') {
+        return `QR ${shortName} – fee valida`;
+    }
+    return `QR ${shortName} – ${fee.label}`;
+}
+
 export function formatEuroFromCents(cents: number): string {
     return new Intl.NumberFormat('it-IT', {
         style: 'currency',

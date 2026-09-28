@@ -72,15 +72,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
-    if (event.type !== 'checkout.session.completed') {
+    const isCheckoutPaidEvent =
+        event.type === 'checkout.session.completed' ||
+        event.type === 'checkout.session.async_payment_succeeded';
+
+    if (!isCheckoutPaidEvent) {
         return NextResponse.json({ received: true });
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
     const orderId = session.metadata?.orderId;
     if (!orderId) {
-        console.warn('[stripe-webhook] checkout.session.completed senza metadata.orderId');
+        console.warn(`[stripe-webhook] ${event.type} senza metadata.orderId`);
         return NextResponse.json({ received: true });
+    }
+
+    // completed può arrivare con payment_status=unpaid (metodi async): aspetta async_payment_succeeded.
+    if (
+        event.type === 'checkout.session.completed' &&
+        session.payment_status &&
+        session.payment_status !== 'paid' &&
+        session.payment_status !== 'no_payment_required'
+    ) {
+        console.info('[stripe-webhook] checkout.session.completed non ancora paid — defer', {
+            orderId,
+            payment_status: session.payment_status,
+            sessionId: session.id,
+        });
+        return NextResponse.json({ received: true, deferred: true });
     }
 
     let grossAmountVal: number | undefined = undefined;
@@ -329,6 +348,14 @@ export async function POST(request: Request) {
                 console.error('[stripe-webhook] Scrittura contabile fallita:', ledgerErr);
             }
         }
+    } else {
+        // Webhook ripetuto / già PAID: fee e side-effect solo alla prima transizione.
+        console.info('[stripe-webhook] Evento duplicato (ordine già PAID) — skip side-effect', {
+            orderId,
+            eventType: event.type,
+            sessionId: session.id,
+        });
+        return NextResponse.json({ received: true, duplicate: true });
     }
 
     const orderNumber = order.orderNumber || order.id;
@@ -386,12 +413,10 @@ export async function POST(request: Request) {
     });
 
     // Archivia ricevuta di cortesia (HTML + Blob) per export ZIP fiscale — non bloccante.
-    if (isFirstPaidTransition) {
-        const { archiveCustomerOrderReceipt } = await import('@/lib/financial/customerReceipt');
-        await archiveCustomerOrderReceipt(orderId).catch((archiveErr) => {
-            console.error('[stripe-webhook] Archiviazione ricevuta fallita:', archiveErr);
-        });
-    }
+    const { archiveCustomerOrderReceipt } = await import('@/lib/financial/customerReceipt');
+    await archiveCustomerOrderReceipt(orderId).catch((archiveErr) => {
+        console.error('[stripe-webhook] Archiviazione ricevuta fallita:', archiveErr);
+    });
 
-    return NextResponse.json({ received: true, duplicate: !isFirstPaidTransition });
+    return NextResponse.json({ received: true, duplicate: false });
 }

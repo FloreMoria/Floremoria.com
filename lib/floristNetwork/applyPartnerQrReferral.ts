@@ -76,6 +76,21 @@ export async function applyPartnerQrReferralOnPaid(input: {
         return { status: 'conflict', reason: 'scan_already_linked' };
     }
 
+    // Idempotenza: stesso ordine già attribuito a questa scansione (webhook ripetuto).
+    if (scan.order && scan.order.id === input.orderId) {
+        const existing = await prisma.order.findUnique({
+            where: { id: input.orderId },
+            select: { referralFeeCents: true, referralFloristId: true },
+        });
+        await clearPartnerQrSessionFlag(input.orderId);
+        return {
+            status: 'applied',
+            referralFloristId: existing?.referralFloristId || scan.floristId,
+            referralFeeCents: existing?.referralFeeCents ?? 0,
+            scanEventId: scan.id,
+        };
+    }
+
     const florist = scan.florist;
     if (
         !florist.isActive ||

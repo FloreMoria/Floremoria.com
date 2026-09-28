@@ -1,3 +1,5 @@
+import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
+
 /** Cookie sessione QR Partner (Art. 2.3) — valore = FloristScanEvent.sessionToken. */
 export const PARTNER_REF_COOKIE = 'floremoria_partner_ref';
 
@@ -7,11 +9,26 @@ export const PARTNER_QR_SESSION_FLAG = 'partnerQrSessionToken';
 /** Metadata Stripe Checkout / PaymentIntent. */
 export const PARTNER_QR_SESSION_METADATA_KEY = 'partnerQrSessionToken';
 
-export const PARTNER_REF_COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax' as const,
-    path: '/',
-    // Nessuna maxAge/expires → cookie di sessione (si cancella alla chiusura browser;
-    // una nuova scansione lo sostituisce).
-};
+/**
+ * Opzioni cookie QR: su floremoria.com usa domain=.floremoria.com
+ * (sopravvive al redirect apex→www). Su preview Vercel resta host-only.
+ */
+export function getPartnerRefCookieOptions(request: {
+    headers: Headers;
+    url: string;
+}): {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'lax';
+    path: '/';
+    domain?: string;
+} {
+    const base = getFloremAuthCookieBase(request);
+    return {
+        httpOnly: true,
+        secure: base.secure,
+        sameSite: 'lax',
+        path: '/',
+        ...(base.domain ? { domain: base.domain } : {}),
+    };
+}

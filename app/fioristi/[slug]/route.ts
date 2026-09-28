@@ -4,7 +4,7 @@ import { getSiteBaseUrl } from '@/lib/site/config';
 import { isLinkPreviewOrBot } from '@/lib/floristNetwork/isLinkPreviewOrBot';
 import {
     PARTNER_REF_COOKIE,
-    PARTNER_REF_COOKIE_OPTIONS,
+    getPartnerRefCookieOptions,
 } from '@/lib/floristNetwork/partnerRefConstants';
 import {
     clientIpFromRequest,
@@ -67,7 +67,11 @@ export async function GET(
         });
 
         const res = NextResponse.redirect(home, 302);
-        res.cookies.set(PARTNER_REF_COOKIE, sessionToken, PARTNER_REF_COOKIE_OPTIONS);
+        res.cookies.set(
+            PARTNER_REF_COOKIE,
+            sessionToken,
+            getPartnerRefCookieOptions(request)
+        );
         return res;
     } catch (err) {
         console.error('[fioristi/slug] createFloristScanEvent fallito:', err);

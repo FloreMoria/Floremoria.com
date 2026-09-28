@@ -7,6 +7,7 @@ import {
 import OrderDetailProofUpload from './OrderDetailProofUpload';
 import ShareableLinkPanel from './ShareableLinkPanel';
 import FloristScoutPanel from './FloristScoutPanel';
+import OrderQrOriginPanel from './OrderQrOriginPanel';
 import DeliveryCountdownBadge from './DeliveryCountdownBadge';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
@@ -21,6 +22,8 @@ interface OrderDetailDrawerProps {
     florists: any[];
     canChangeStatus: boolean;
     isGlobalAdmin?: boolean;
+    /** Operazione 3: solo Admin / Super Admin. */
+    canViewQrNetwork?: boolean;
     openDuplicateModal?: (order: any) => void;
 }
 
@@ -31,6 +34,7 @@ export default function OrderDetailDrawer({
     florists,
     canChangeStatus,
     isGlobalAdmin,
+    canViewQrNetwork = false,
     openDuplicateModal,
 }: OrderDetailDrawerProps) {
     const [localOrder, setLocalOrder] = useState<any | null>(null);
@@ -457,6 +461,8 @@ export default function OrderDetailDrawer({
                             </div>
                         </div>
                     )}
+
+                    {canViewQrNetwork ? <OrderQrOriginPanel order={localOrder} /> : null}
 
                     {/* FLOW STATO */}
                     <div className="space-y-3">

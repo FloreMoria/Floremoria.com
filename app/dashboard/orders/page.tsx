@@ -33,6 +33,8 @@ export default async function OrdersPage({
     const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
     const isGlobalAdmin = hasGlobalOrdersView(roleName);
+    // Operazione 3: vista rete QR solo Admin / Super Admin (OPERATOR escluso).
+    const canViewQrNetwork = roleName === 'ADMIN' || roleName === 'SUPER_ADMIN';
     let canChangeStatus = canEditOrderStatus(roleName);
 
     // Permessi granulari da tabella Role (override per ruoli custom non elevati).
@@ -87,6 +89,16 @@ export default async function OrdersPage({
                     user: true,
                     partner: true,
                     deliveryProof: true,
+                    referralFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
+                    referralScanEvent: { select: { id: true, createdAt: true } },
+                    executorFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
+                    coordinatorFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
                     items: {
                         include: {
                             product: true,
@@ -108,6 +120,16 @@ export default async function OrdersPage({
                         user: true,
                         partner: true,
                         deliveryProof: true,
+                        referralFlorist: {
+                            select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                        },
+                        referralScanEvent: { select: { id: true, createdAt: true } },
+                        executorFlorist: {
+                            select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                        },
+                        coordinatorFlorist: {
+                            select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                        },
                         items: {
                             include: {
                                 product: true,
@@ -196,6 +218,7 @@ export default async function OrdersPage({
                     canChangeStatus={canChangeStatus}
                     isGlobalAdmin={isGlobalAdmin}
                     testModeActive={testModeActive}
+                    canViewQrNetwork={canViewQrNetwork}
                 />
             </Suspense>
         </div>

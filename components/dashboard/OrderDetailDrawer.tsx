@@ -35,6 +35,7 @@ export default function OrderDetailDrawer({
 }: OrderDetailDrawerProps) {
     const [localOrder, setLocalOrder] = useState<any | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isMarkingTest, setIsMarkingTest] = useState(false);
     const [customerConfirmMessage, setCustomerConfirmMessage] = useState('');
     const [isSendingCustomerConfirm, setIsSendingCustomerConfirm] = useState(false);
 
@@ -119,6 +120,45 @@ export default function OrderDetailDrawer({
             alert('Errore di rete durante il salvataggio.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const markOrderAsTest = async () => {
+        if (!localOrder?.id || !isGlobalAdmin || isMarkingTest) return;
+        if (localOrder.isTest) {
+            alert('Ordine già marcato come test.');
+            return;
+        }
+        if (
+            !window.confirm(
+                'Marcare questo ordine come isTest=true con cancellationCause=FLOREMORIA?\n\nEscluso da prospetti/corrispettivi; ferma ulteriori invii al fiorista.'
+            )
+        ) {
+            return;
+        }
+        setIsMarkingTest(true);
+        try {
+            const res = await fetch(`/api/dashboard/orders/${localOrder.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    isTest: true,
+                    cancellationCause: 'FLOREMORIA',
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Marcatura test non riuscita.');
+                return;
+            }
+            const merged = { ...localOrder, ...data, isTest: true, cancellationCause: 'FLOREMORIA' };
+            setLocalOrder(merged);
+            if (onOrderUpdated) onOrderUpdated(merged);
+            alert('Ordine marcato come test (audit in admin_field_change_logs).');
+        } catch {
+            alert('Errore di rete durante la marcatura test.');
+        } finally {
+            setIsMarkingTest(false);
         }
     };
 
@@ -436,6 +476,29 @@ export default function OrderDetailDrawer({
                                 </button>
                             ))}
                         </div>
+                        {isGlobalAdmin ? (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                                {localOrder.isTest ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200">
+                                        Ordine test
+                                        {localOrder.cancellationCause
+                                            ? ` · ${localOrder.cancellationCause}`
+                                            : ''}
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => void markOrderAsTest()}
+                                        disabled={isMarkingTest}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                                    >
+                                        {isMarkingTest
+                                            ? 'Marcatura…'
+                                            : 'Marca come test (isTest + FLOREMORIA)'}
+                                    </button>
+                                )}
+                            </div>
+                        ) : null}
                     </div>
 
                     {/* MESSAGGIO BIGLIETTO / NASTRO */}

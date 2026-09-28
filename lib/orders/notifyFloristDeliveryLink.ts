@@ -55,6 +55,14 @@ export async function notifyFloristDeliveryLinkForOrder(
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
 
+    // Kill-switch solo fiorista (cliente resta attivo). Usato per smoke test QR in produzione.
+    if (process.env.WHATSAPP_SKIP_FLORIST_NOTIFY === '1' && !options.force) {
+        console.info(
+            `[vera-workflow] Punto A SKIP (WHATSAPP_SKIP_FLORIST_NOTIFY=1) ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: 'florist_notify_env_disabled' };
+    }
+
     // BLOCCO TASSATIVO: Se nessun fiorista è assegnato (ordine non coperto o da assegnare), zero notifiche.
     if (!order.partnerId || !order.partner || order.partner.deletedAt) {
         console.info(

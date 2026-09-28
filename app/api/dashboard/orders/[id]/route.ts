@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import type { OrderCancellationCause } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { writeAdminFieldChangeLog } from '@/lib/admin/adminFieldChangeLog';
 import { retryPuntoAIfBlocked } from '@/lib/vera/orderWorkflow';
 import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
@@ -7,8 +9,19 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
+import {
+    isWorkflowStepDone,
+    parseWorkflowFlags,
+} from '@/lib/vera/orderWorkflow/types';
 
 export const maxDuration = 120;
+
+const CANCELLATION_CAUSES = new Set<OrderCancellationCause>([
+    'CUSTOMER',
+    'FLORIST',
+    'FLOREMORIA',
+    'OTHER',
+]);
 
 export async function PUT(request: Request, context: any) {
     const auth = await requireDashboardAdmin();
@@ -20,7 +33,16 @@ export async function PUT(request: Request, context: any) {
 
         const previousOrder = await prisma.order.findUnique({
             where: { id },
-            select: { status: true, partnerId: true, userId: true, gravePosition: true, veraAlertType: true },
+            select: {
+                status: true,
+                partnerId: true,
+                userId: true,
+                gravePosition: true,
+                veraAlertType: true,
+                isTest: true,
+                cancellationCause: true,
+                veraWorkflowFlags: true,
+            },
         });
 
         // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
@@ -123,6 +145,34 @@ export async function PUT(request: Request, context: any) {
             }
         }
 
+        // Sandbox / smoke: marca ordine esistente come test (+ causa cancellazione rete).
+        if (body.isTest !== undefined) {
+            safeData.isTest = Boolean(body.isTest);
+        }
+        if (body.cancellationCause !== undefined) {
+            if (body.cancellationCause === null || body.cancellationCause === '') {
+                safeData.cancellationCause = null;
+            } else {
+                const cause = String(body.cancellationCause).trim().toUpperCase();
+                if (CANCELLATION_CAUSES.has(cause as OrderCancellationCause)) {
+                    safeData.cancellationCause = cause as OrderCancellationCause;
+                }
+            }
+        }
+
+        // Marca isTest → ferma Punto A pendente (flush cron non deve notificare il fiorista).
+        if (safeData.isTest === true && previousOrder && !previousOrder.isTest) {
+            const flags = parseWorkflowFlags(previousOrder.veraWorkflowFlags);
+            if (!isWorkflowStepDone(flags, 'puntoA_florist')) {
+                safeData.veraWorkflowFlags = {
+                    ...flags,
+                    puntoA_florist: new Date().toISOString(),
+                    puntoA_florist_skipped_test: true,
+                };
+                delete (safeData.veraWorkflowFlags as Record<string, unknown>).puntoA_florist_deferred;
+            }
+        }
+
         if (safeData.status === 'CANCELLED') {
             const cancelled = await cancelDashboardOrder(id);
             return NextResponse.json(cancelled);
@@ -140,6 +190,44 @@ export async function PUT(request: Request, context: any) {
                 { error: 'Errore aggiornamento stato nel database', details: dbError?.message || String(dbError) },
                 { status: 500 }
             );
+        }
+
+        // Audit trail campi sensibili (admin_field_change_logs).
+        const auditJobs: Promise<void>[] = [];
+        if (previousOrder && safeData.isTest !== undefined && safeData.isTest !== previousOrder.isTest) {
+            auditJobs.push(
+                writeAdminFieldChangeLog({
+                    actorUserId: auth.userId,
+                    actorRole: auth.role,
+                    entityType: 'Order',
+                    entityId: id,
+                    field: 'isTest',
+                    before: previousOrder.isTest,
+                    after: updatedOrder.isTest,
+                })
+            );
+        }
+        if (
+            previousOrder &&
+            safeData.cancellationCause !== undefined &&
+            safeData.cancellationCause !== previousOrder.cancellationCause
+        ) {
+            auditJobs.push(
+                writeAdminFieldChangeLog({
+                    actorUserId: auth.userId,
+                    actorRole: auth.role,
+                    entityType: 'Order',
+                    entityId: id,
+                    field: 'cancellationCause',
+                    before: previousOrder.cancellationCause,
+                    after: updatedOrder.cancellationCause,
+                })
+            );
+        }
+        if (auditJobs.length > 0) {
+            await Promise.all(auditJobs).catch((auditErr) => {
+                console.error('[orders-put] AdminFieldChangeLog fallito (non bloccante):', auditErr);
+            });
         }
 
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;

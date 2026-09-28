@@ -42,9 +42,16 @@ interface DossierProps {
     partner: Partner;
     orders: any[];
     florists: any[];
+    /** Operazione 3: solo Admin / Super Admin. */
+    canViewQrNetwork?: boolean;
 }
 
-export default function ClientFloristDossier({ partner, orders: initialOrders, florists }: DossierProps) {
+export default function ClientFloristDossier({
+    partner,
+    orders: initialOrders,
+    florists,
+    canViewQrNetwork = false,
+}: DossierProps) {
     const [orders, setOrders] = useState(initialOrders);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [editingOrder, setEditingOrder] = useState<any | null>(null);
@@ -328,6 +335,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                         florists={florists}
                         canChangeStatus={true}
                         isGlobalAdmin={true}
+                        canViewQrNetwork={canViewQrNetwork}
                     />
 
                     {editingOrder ? (

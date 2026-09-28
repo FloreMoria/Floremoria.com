@@ -35,9 +35,10 @@ interface ClientOrdersTableProps {
     canChangeStatus: boolean;
     isGlobalAdmin?: boolean;
     testModeActive?: boolean;
+    canViewQrNetwork?: boolean;
 }
 
-export default function ClientOrdersTable({ orders, abandonedOrders = [], florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin, testModeActive = false }: ClientOrdersTableProps) {
+export default function ClientOrdersTable({ orders, abandonedOrders = [], florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin, testModeActive = false, canViewQrNetwork = false }: ClientOrdersTableProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -617,6 +618,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                         users={users}
                         deceasedProfiles={deceasedProfiles}
                         onRefresh={() => router.refresh()}
+                        canViewQrNetwork={canViewQrNetwork}
                     />
                 </div>
             ) : (
@@ -1067,6 +1069,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                     florists={florists}
                     canChangeStatus={canChangeStatus}
                     isGlobalAdmin={isGlobalAdmin}
+                    canViewQrNetwork={canViewQrNetwork}
                     openDuplicateModal={openDuplicateModal}
                 />
             </>

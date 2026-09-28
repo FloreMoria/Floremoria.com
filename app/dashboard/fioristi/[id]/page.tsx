@@ -1,10 +1,13 @@
 import prisma from '@/lib/prisma';
 import { ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { Building2, MapPin, MessageCircle, Star } from 'lucide-react';
 import ClientFloristDossier from './ClientFloristDossier';
 import ClientFloristDossierHeader from './ClientFloristDossierHeader';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
+import { loadFloristQrNetworkPayload } from '@/lib/floristNetwork/loadFloristQrNetwork';
+import FloristQrNetworkSection from '@/components/dashboard/FloristQrNetworkSection';
 
 import PartnerLinkedAgenciesCard, { type LinkedAgency } from '@/components/dashboard/PartnerLinkedAgenciesCard';
 
@@ -22,6 +25,11 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
     const { id } = await params;
 
+    const cookieStore = await cookies();
+    const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
+    // Operazione 3: sola lettura Admin / Super Admin (OPERATOR escluso).
+    const canViewQrNetwork = roleName === 'ADMIN' || roleName === 'SUPER_ADMIN';
+
     const partner = await prisma.partner.findUnique({
         where: { id },
         include: {
@@ -34,6 +42,16 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         },
                     },
                     deliveryProof: true,
+                    referralFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
+                    referralScanEvent: { select: { id: true, createdAt: true } },
+                    executorFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
+                    coordinatorFlorist: {
+                        select: { id: true, shopName: true, ownerName: true, uniqueCode: true, slug: true },
+                    },
                 },
                 orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
             },
@@ -43,6 +61,8 @@ export default async function FloristDossierPage({ params }: { params: { id: str
     if (!partner) {
         return notFound();
     }
+
+    const qrNetwork = canViewQrNetwork ? await loadFloristQrNetworkPayload(id) : null;
 
     const activeOrders = partner.orders.filter((o) => o.status !== 'CANCELLED' && !o.deletedAt).length;
 
@@ -202,6 +222,8 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         </div>
                     </section>
 
+                    {qrNetwork ? <FloristQrNetworkSection data={qrNetwork} /> : null}
+
                     <PartnerLinkedAgenciesCard
                         agencies={linkedAgencies}
                         partnerName={partner.shopName}
@@ -211,6 +233,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         partner={partner}
                         orders={partner.orders.map(enrichOrderWithShareableLinks)}
                         florists={florists}
+                        canViewQrNetwork={canViewQrNetwork}
                     />
                 </div>
             </div>

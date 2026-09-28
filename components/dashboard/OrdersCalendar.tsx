@@ -64,6 +64,8 @@ export interface OrdersCalendarProps {
     deceasedProfiles?: any[];
     onRefresh?: () => void;
     darkMode?: boolean;
+    /** Operazione 3: solo Admin / Super Admin. */
+    canViewQrNetwork?: boolean;
 }
 
 const MONTH_NAMES_IT = [
@@ -380,6 +382,7 @@ export default function OrdersCalendar({
     deceasedProfiles = [],
     onRefresh,
     darkMode = false,
+    canViewQrNetwork = false,
 }: OrdersCalendarProps) {
     const today = useMemo(() => new Date(), []);
     const [focusedDate, setFocusedDate] = useState<Date>(today);
@@ -1206,6 +1209,7 @@ export default function OrdersCalendar({
                     florists={florists}
                     canChangeStatus={true}
                     isGlobalAdmin={true}
+                    canViewQrNetwork={canViewQrNetwork}
                 />
             )}
 

@@ -1,0 +1,32 @@
+---
+description: Esame e annotazione quotidiana delle mail (digest Second Brain / Antigravity)
+alwaysApply: true
+---
+
+# Regola Mail Giornaliere
+
+Ogni giorno l’agente **deve** esaminare e annotare le mail del giorno, non solo quando il titolare lo chiede.
+
+## Fonte
+
+1. Preferire il digest Second Brain / Antigravity:
+   - `/Users/floremoria/Documents/Second Brain/00_SISTEMA/.cache/today-mails.json`
+   - log run: `.../00_SISTEMA/.cache/logs/daily-DD-MM-YYYY.log`
+2. Se il JSON manca o è di un giorno precedente: segnalarlo e non inventare contenuti.
+
+## Cosa fare
+
+- Leggere le mail marcate `important` (e le altre se rilevanti).
+- Annotare in sintesi (senza dump PII inutili): mittente, oggetto, decisione/azione, scadenze.
+- Distinguere aree: FloreMoria / Galleria MAG / personale / commerciale.
+
+## Dove annotare
+
+1. **Durante la giornata** (se emergete da mail): append in `docs/verbali/.today_log.txt`  
+   es. `[YYYY-MM-DD HH:mm] mail: Battistella conferma incontro sabato 3/10 15:30–19:30.`
+2. **Fine giornata / verbale**: sezione dedicata nel verbale `docs/verbali/DD-MM-YYYY.md` (digest mail del giorno), anche se l’auto-verbale Antigravity è fallito — le mail restano obbligatorie.
+
+## Divieti
+
+- Non omettere scadenze legali/fiscali/personali solo perché “non tecniche”.
+- Non contraddire date confermate dalle mail senza segnalare il conflitto col riepilogo verbale.

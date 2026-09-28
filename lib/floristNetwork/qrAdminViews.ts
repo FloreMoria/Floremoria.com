@@ -19,8 +19,18 @@ export function isQrFeeEligibleForTotals(order: {
     return true;
 }
 
-export type QrFeeStatusKind = 'valid' | 'excluded_test' | 'excluded_cancelled' | 'none';
+export type QrFeeStatusKind =
+    | 'valid'
+    | 'excluded_test'
+    | 'excluded_cancelled_customer'
+    | 'excluded_cancelled_florist'
+    | 'excluded_cancelled'
+    | 'none';
 
+/**
+ * Stato fee per UI admin (drawer + prospetto).
+ * Perché: tracciare sempre la fee anche su test/annullati; i totali usano isQrFeeEligibleForTotals.
+ */
 export function resolveQrFeeStatus(order: {
     isTest?: boolean | null;
     status?: OrderStatus | string | null;
@@ -28,17 +38,21 @@ export function resolveQrFeeStatus(order: {
     referralFeeCents?: number | null;
     deletedAt?: Date | string | null;
 }): { kind: QrFeeStatusKind; label: string } {
+    // Test ha priorità: anche se cancellationCause=FLOREMORIA dopo marca-test.
     if (order.isTest) {
         return { kind: 'excluded_test', label: 'escluso – test' };
     }
-    const cancelledByParty =
-        order.status === 'CANCELLED' &&
-        (order.cancellationCause === 'CUSTOMER' || order.cancellationCause === 'FLORIST');
-    if (cancelledByParty) {
-        return { kind: 'excluded_cancelled', label: 'esclusa perché annullata' };
-    }
     if (order.status === 'CANCELLED') {
-        return { kind: 'excluded_cancelled', label: 'esclusa perché annullata' };
+        if (order.cancellationCause === 'CUSTOMER') {
+            return { kind: 'excluded_cancelled_customer', label: 'escluso – annullato cliente' };
+        }
+        if (order.cancellationCause === 'FLORIST') {
+            return { kind: 'excluded_cancelled_florist', label: 'escluso – annullato fiorista' };
+        }
+        if (order.cancellationCause === 'FLOREMORIA') {
+            return { kind: 'excluded_cancelled', label: 'escluso – annullato FloreMoria' };
+        }
+        return { kind: 'excluded_cancelled', label: 'escluso – annullato' };
     }
     if ((order.referralFeeCents ?? 0) > 0) {
         return { kind: 'valid', label: 'valida' };

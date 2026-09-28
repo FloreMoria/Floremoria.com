@@ -50,9 +50,11 @@ function formatScanAt(value?: string | Date | null): string {
 
 /**
  * Riquadro sola lettura Origine QR (Admin/Super Admin).
+ * Sempre visibile se c’è referralFloristId — anche isTest / annullati (stato fee in badge).
  * Art. 7.2: nessun dato acquirente — solo fee / scansione / rete.
  */
 export default function OrderQrOriginPanel({ order }: Props) {
+    // Unica condizione di nascosto: assenza di referral QR.
     if (!order.referralFloristId) return null;
 
     const feeStatus = resolveQrFeeStatus(order);
@@ -66,7 +68,7 @@ export default function OrderQrOriginPanel({ order }: Props) {
             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
             : feeStatus.kind === 'excluded_test'
               ? 'bg-amber-50 text-amber-900 border-amber-200'
-              : feeStatus.kind === 'excluded_cancelled'
+              : feeStatus.kind.startsWith('excluded_cancelled')
                 ? 'bg-red-50 text-red-800 border-red-200'
                 : 'bg-gray-50 text-gray-700 border-gray-200';
 

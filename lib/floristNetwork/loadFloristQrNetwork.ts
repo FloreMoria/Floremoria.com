@@ -5,7 +5,19 @@ import {
     formatEuroFromCents,
     isQrFeeEligibleForTotals,
     monthBoundsUtc,
+    resolveQrFeeStatus,
 } from '@/lib/floristNetwork/qrAdminViews';
+
+export type FloristQrNetworkOrderRow = {
+    orderNumber: string;
+    createdAt: string;
+    totalPriceCents: number;
+    referralFeeCents: number;
+    orderStatus: string;
+    feeStatusLabel: string;
+    /** true = conteggiato nei totali mese (Art. 3.3). */
+    inTotals: boolean;
+};
 
 export type FloristQrNetworkMonthSummary = {
     year: number;
@@ -15,13 +27,8 @@ export type FloristQrNetworkMonthSummary = {
     qrOrdersCount: number;
     qrFeesCents: number;
     coordinationFeesCents: number;
-    orders: Array<{
-        orderNumber: string;
-        createdAt: string;
-        totalPriceCents: number;
-        referralFeeCents: number;
-        status: string;
-    }>;
+    /** Tutti gli ordini QR del mese (inclusi esclusi), per tracciabilità. */
+    orders: FloristQrNetworkOrderRow[];
 };
 
 export type FloristQrNetworkPayload = {
@@ -49,7 +56,7 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
             where: {
                 referralFloristId: partnerId,
                 createdAt: { gte: start, lt: end },
-                deletedAt: null,
+                // Soft-deleted inclusi: tracciabilità fee QR (restano fuori totali via isQrFeeEligibleForTotals).
             },
             orderBy: { createdAt: 'desc' },
             select: {
@@ -76,7 +83,7 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
         }),
     ]);
 
-    // Elenco prospetto: esclusi isTest e annullati Art. 3.3 (e in generale i CANCELLED).
+    // Totali Art. 3.3: solo eleggibili. Elenco: tutti (test/annullati restano tracciabili).
     const eligible = qrOrdersRaw.filter((o) => isQrFeeEligibleForTotals(o));
 
     return {
@@ -87,13 +94,18 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
         qrOrdersCount: eligible.length,
         qrFeesCents: eligible.reduce((s, o) => s + (o.referralFeeCents || 0), 0),
         coordinationFeesCents: coordinationAgg._sum.coordinationFeeCents || 0,
-        orders: eligible.map((o) => ({
-            orderNumber: o.orderNumber || '—',
-            createdAt: o.createdAt.toISOString(),
-            totalPriceCents: o.totalPriceCents,
-            referralFeeCents: o.referralFeeCents,
-            status: o.status,
-        })),
+        orders: qrOrdersRaw.map((o) => {
+            const fee = resolveQrFeeStatus(o);
+            return {
+                orderNumber: o.orderNumber || '—',
+                createdAt: o.createdAt.toISOString(),
+                totalPriceCents: o.totalPriceCents,
+                referralFeeCents: o.referralFeeCents,
+                orderStatus: o.status,
+                feeStatusLabel: fee.label,
+                inTotals: isQrFeeEligibleForTotals(o),
+            };
+        }),
     } satisfies FloristQrNetworkMonthSummary;
 }
 

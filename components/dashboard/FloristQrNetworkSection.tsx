@@ -47,7 +47,7 @@ function MonthBlock({
             </div>
 
             {month.orders.length === 0 ? (
-                <p className="text-xs text-gray-500 italic">Nessun ordine QR nel prospetto (Art. 3.3).</p>
+                <p className="text-xs text-gray-500 italic">Nessun ordine QR in questo mese.</p>
             ) : (
                 <div className="overflow-x-auto rounded-lg border border-gray-100">
                     <table className="min-w-full text-sm">
@@ -57,12 +57,17 @@ function MonthBlock({
                                 <th className="text-left px-3 py-2 font-bold">Data</th>
                                 <th className="text-right px-3 py-2 font-bold">Importo</th>
                                 <th className="text-right px-3 py-2 font-bold">Fee</th>
-                                <th className="text-left px-3 py-2 font-bold">Stato</th>
+                                <th className="text-left px-3 py-2 font-bold">Stato fee</th>
                             </tr>
                         </thead>
                         <tbody>
                             {month.orders.map((o) => (
-                                <tr key={o.orderNumber} className="border-t border-gray-50">
+                                <tr
+                                    key={o.orderNumber}
+                                    className={`border-t border-gray-50 ${
+                                        o.inTotals ? '' : 'bg-amber-50/40 text-gray-600'
+                                    }`}
+                                >
                                     <td className="px-3 py-2 font-mono font-semibold text-gray-900">
                                         {o.orderNumber}
                                     </td>
@@ -78,7 +83,22 @@ function MonthBlock({
                                     <td className="px-3 py-2 text-right font-semibold text-violet-800">
                                         {formatEuroFromCents(o.referralFeeCents)}
                                     </td>
-                                    <td className="px-3 py-2 text-gray-600">{o.status}</td>
+                                    <td className="px-3 py-2">
+                                        <span
+                                            className={
+                                                o.inTotals
+                                                    ? 'text-emerald-800 font-semibold'
+                                                    : 'text-amber-900 font-semibold'
+                                            }
+                                        >
+                                            {o.feeStatusLabel}
+                                        </span>
+                                        {!o.inTotals ? (
+                                            <span className="block text-[10px] text-gray-500 mt-0.5">
+                                                fuori totali · {o.orderStatus}
+                                            </span>
+                                        ) : null}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

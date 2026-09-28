@@ -51,6 +51,11 @@ export default function OrderCompletedPage() {
         setBuyerPhone(urlPhone ? decodeURIComponent(urlPhone) : null);
         setDeliveryProvince(urlProv);
 
+        // Art. 2.3: cancella cookie QR Partner — ordini successivi senza nuova scansione = nessuna fee.
+        void fetch('/api/partner-ref/clear', { method: 'POST', credentials: 'same-origin' }).catch(
+            () => undefined
+        );
+
         // GA4 Sync: send margin (Not full value) for real conversion tracking
         if (urlMargin) {
             const marginValue = parseInt(urlMargin, 10);

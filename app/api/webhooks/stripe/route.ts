@@ -10,6 +10,11 @@ import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
 import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
 import { calculatePartnerCommissionBreakdown } from '@/lib/pricing/calculatePartnerCommission';
+import {
+    applyPartnerQrReferralOnPaid,
+    readPartnerQrSessionFromFlags,
+} from '@/lib/floristNetwork/applyPartnerQrReferral';
+import { PARTNER_QR_SESSION_METADATA_KEY } from '@/lib/floristNetwork/partnerRefConstants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -168,6 +173,17 @@ export async function POST(request: Request) {
 
     // Prima transizione a pagato: allinea DB locale, benvenuto WhatsApp VERA.
     if (isFirstPaidTransition) {
+        // Fee QR Partner (Art. 2.3): solo a conferma pagamento. Non tocca referralPartnerId.
+        const metaToken = session.metadata?.[PARTNER_QR_SESSION_METADATA_KEY]?.trim() || null;
+        const flagToken = readPartnerQrSessionFromFlags(order.veraWorkflowFlags);
+        const partnerQrSessionToken = metaToken || flagToken;
+        await applyPartnerQrReferralOnPaid({
+            orderId,
+            sessionToken: partnerQrSessionToken,
+        }).catch((qrErr) => {
+            console.error('[stripe-webhook] applyPartnerQrReferralOnPaid fallito (non bloccante):', qrErr);
+        });
+
         const commissionUpdate =
             order.masterPartnerId && !order.partnerCommissionCents
                 ? (() => {

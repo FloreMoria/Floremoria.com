@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { getCartCatalogCategoryState } from '@/lib/floremCartCategory';
 import { products as catalogProducts } from '@/lib/products';
 import prisma from '@/lib/prisma';
@@ -18,6 +19,11 @@ import { resolveCheckoutPartnerAssociations } from '@/lib/orders/resolveCheckout
 import { calculatePartnerCommissionBreakdown } from '@/lib/pricing/calculatePartnerCommission';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
+import {
+    PARTNER_QR_SESSION_METADATA_KEY,
+    PARTNER_REF_COOKIE,
+} from '@/lib/floristNetwork/partnerRefConstants';
+import { mergePartnerQrSessionFlag } from '@/lib/floristNetwork/applyPartnerQrReferral';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -358,6 +364,12 @@ export async function POST(request: Request) {
                   )
                 : null;
 
+        // QR Partner (Art. 2.3): cookie sessione → salvato sull'ordine in attesa + metadata pagamento.
+        // Attribuzione fee solo al webhook di conferma (non qui). Non tocca referralPartnerId.
+        const cookieStore = await cookies();
+        const partnerQrSessionToken =
+            cookieStore.get(PARTNER_REF_COOKIE)?.value?.trim() || null;
+
         let order: Awaited<ReturnType<typeof prisma.order.create>> | undefined;
         for (let attempt = 0; attempt < 6; attempt += 1) {
             try {
@@ -392,6 +404,14 @@ export async function POST(request: Request) {
                             partnerCommissionTaxableCents: feeBreakdown?.taxableCents ?? null,
                             partnerCommissionVatCents: feeBreakdown?.vatCents ?? null,
                             ...(notifyEmail ? { partnerNotifyEmail: notifyEmail } : {}),
+                            ...(partnerQrSessionToken
+                                ? {
+                                      veraWorkflowFlags: mergePartnerQrSessionFlag(
+                                          null,
+                                          partnerQrSessionToken
+                                      ),
+                                  }
+                                : {}),
                             status: 'PENDING',
                             items: {
                                 create: resolvedItems,
@@ -546,6 +566,9 @@ export async function POST(request: Request) {
                 orderId: order.id,
                 orderNumber: order.orderNumber,
                 ricercaPosizione: requiresLocationSearch ? 'SI' : 'NO',
+                ...(partnerQrSessionToken
+                    ? { [PARTNER_QR_SESSION_METADATA_KEY]: partnerQrSessionToken }
+                    : {}),
                 ...(orderCategory === 'FF'
                     ? {
                           ffTombCareReminder10d: ffTombCareReminder10d === true ? 'true' : 'false',
@@ -564,6 +587,9 @@ export async function POST(request: Request) {
                 metadata: {
                     orderId: order.id,
                     orderNumber: order.orderNumber,
+                    ...(partnerQrSessionToken
+                        ? { [PARTNER_QR_SESSION_METADATA_KEY]: partnerQrSessionToken }
+                        : {}),
                 },
             },
             success_url: successUrl,

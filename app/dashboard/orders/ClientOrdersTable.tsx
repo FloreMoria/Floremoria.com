@@ -24,7 +24,7 @@ import DeliveryCountdownBadge from '@/components/dashboard/DeliveryCountdownBadg
 import type { ProfileUserType } from '@prisma/client';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName, compareBySurname } from '@/lib/utils/formatPersonName';
-import { formatQrOriginTooltip } from '@/lib/floristNetwork/qrAdminViews';
+import { formatQrOriginTooltip, hasPartnerQrOrigin } from '@/lib/floristNetwork/qrAdminViews';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -401,7 +401,8 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
     }
 
     if (filterQrOnly) {
-        filteredOrders = filteredOrders.filter((o) => Boolean(o.referralFloristId));
+        // Origine QR: referralFloristId valorizzato. Null-safe; non filtra su cancellationCause.
+        filteredOrders = filteredOrders.filter((o) => hasPartnerQrOrigin(o));
     }
 
     // Sort Logic
@@ -774,7 +775,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                     {order.orderNumber ||
                                                         `#${order.id.substring(order.id.length - 6).toUpperCase()}`}
                                                 </span>
-                                                {order.referralFloristId ? (
+                                                {hasPartnerQrOrigin(order) ? (
                                                     <span
                                                         className="inline-flex items-center justify-center text-violet-700"
                                                         title={formatQrOriginTooltip(order)}

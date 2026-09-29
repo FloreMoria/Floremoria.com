@@ -57,7 +57,11 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
             deletedAt: null,
             partnerId: { not: null },
             floristCompensationCents: { gt: 0 },
-            createdAt: { gte: lookback },
+            // Compenso esecuzione: mese/anno della CONSEGNA (Art. 9). Fallback createdAt in JS.
+            OR: [
+                { deliveryDate: { gte: lookback } },
+                { deliveryDate: null, createdAt: { gte: lookback } },
+            ],
         },
         select: {
             id: true,
@@ -89,7 +93,7 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
                 },
             },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
         take: 2000,
     });
 

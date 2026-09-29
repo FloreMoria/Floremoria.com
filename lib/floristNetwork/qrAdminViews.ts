@@ -1,6 +1,9 @@
 import type { OrderCancellationCause, OrderStatus } from '@prisma/client';
 
-/** Fee QR considerata nei totali prospetto (Art. 3.3). */
+/**
+ * Fee QR nei totali prospetto (Art. 3.3 / 9).
+ * Valutazione in JS: `cancellationCause` null è ammesso (mai filtrare con SQL NOT IN).
+ */
 export function isQrFeeEligibleForTotals(order: {
     isTest?: boolean | null;
     status?: OrderStatus | string | null;
@@ -9,14 +12,20 @@ export function isQrFeeEligibleForTotals(order: {
 }): boolean {
     if (order.deletedAt) return false;
     if (order.isTest) return false;
-    if (order.status === 'CANCELLED') {
-        const cause = order.cancellationCause;
-        // Art. 3.3: esclusi annullamenti per scelta cliente o errore fiorista.
-        if (cause === 'CUSTOMER' || cause === 'FLORIST') return false;
-        // Altri annullamenti: non maturano fee nel prospetto.
+    if (order.status === 'CANCELLED') return false;
+    // Cause esplicite di esclusione anche se status non CANCELLED (edge).
+    if (order.cancellationCause === 'CUSTOMER' || order.cancellationCause === 'FLORIST') {
         return false;
     }
+    // null / OTHER / FLOREMORIA (non cancellato) → eleggibile
     return true;
+}
+
+/** True se l’ordine ha origine QR partner (icona / filtro lista). Null-safe. */
+export function hasPartnerQrOrigin(order: {
+    referralFloristId?: string | null;
+}): boolean {
+    return Boolean(order.referralFloristId && String(order.referralFloristId).trim());
 }
 
 export type QrFeeStatusKind =

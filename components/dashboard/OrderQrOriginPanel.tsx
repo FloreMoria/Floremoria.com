@@ -3,6 +3,7 @@
 import { QrCode } from 'lucide-react';
 import {
     formatEuroFromCents,
+    hasPartnerQrOrigin,
     resolveQrFeeStatus,
 } from '@/lib/floristNetwork/qrAdminViews';
 
@@ -54,8 +55,8 @@ function formatScanAt(value?: string | Date | null): string {
  * Art. 7.2: nessun dato acquirente — solo fee / scansione / rete.
  */
 export default function OrderQrOriginPanel({ order }: Props) {
-    // Unica condizione di nascosto: assenza di referral QR.
-    if (!order.referralFloristId) return null;
+    // Unica condizione di nascosto: assenza di referral QR (null-safe).
+    if (!hasPartnerQrOrigin(order)) return null;
 
     const feeStatus = resolveQrFeeStatus(order);
     const feeCents = order.referralFeeCents ?? 0;

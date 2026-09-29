@@ -43,6 +43,7 @@ function MonthBlock({
                     <div className="text-lg font-bold text-violet-900 mt-0.5">
                         {formatEuroFromCents(month.qrFeesCents)}
                     </div>
+                    <div className="text-[10px] text-violet-700/80 mt-0.5">mese pagamento</div>
                 </div>
                 <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
@@ -72,7 +73,7 @@ function MonthBlock({
                         <thead className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
                             <tr>
                                 <th className="text-left px-3 py-2 font-bold">Ordine</th>
-                                <th className="text-left px-3 py-2 font-bold">Data</th>
+                                <th className="text-left px-3 py-2 font-bold">Pagamento</th>
                                 <th className="text-right px-3 py-2 font-bold">Importo</th>
                                 <th className="text-right px-3 py-2 font-bold">Fee QR</th>
                                 <th className="text-left px-3 py-2 font-bold">Affido</th>
@@ -91,10 +92,12 @@ function MonthBlock({
                                         {o.orderNumber}
                                     </td>
                                     <td className="px-3 py-2 text-gray-700">
-                                        {new Intl.DateTimeFormat('it-IT', {
-                                            timeZone: 'Europe/Rome',
-                                            dateStyle: 'short',
-                                        }).format(new Date(o.createdAt))}
+                                        {o.paidAt
+                                            ? new Intl.DateTimeFormat('it-IT', {
+                                                  timeZone: 'Europe/Rome',
+                                                  dateStyle: 'short',
+                                              }).format(new Date(o.paidAt))
+                                            : '—'}
                                     </td>
                                     <td className="px-3 py-2 text-right text-gray-800">
                                         {formatEuroFromCents(o.totalPriceCents)}
@@ -234,7 +237,8 @@ export default function FloristQrNetworkSection({ data }: Props) {
                         Rete &amp; QR
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        Vista admin sola lettura — fee QR e coordinamento (Art. 2.3 / 3.3). Nessun dato cliente.
+                        Prospetto mensile (Art. 9) — fee QR su mese pagamento; coordinamento su mese
+                        consegna. Nessun dato cliente.
                     </p>
                 </div>
             </div>

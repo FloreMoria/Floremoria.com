@@ -422,6 +422,7 @@ export async function POST(request: Request) {
                         orderNumber,
                         status: effectiveFloristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
                         partnerPaymentStatus: partnerAlreadyPaid ? 'PAID' : 'UNPAID',
+                        ...(partnerAlreadyPaid ? { paidAt: new Date() } : {}),
                         paymentMethodLabel: partnerPaymentKind,
                         isTest: isTestOrder,
                         financeNotes: isTestOrder ? buildPartnerTestFinanceNote(auth.publicId) : undefined,

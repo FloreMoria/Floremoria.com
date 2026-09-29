@@ -243,6 +243,7 @@ export async function createDashboardManualOrder(
         isRecurring: Boolean(input.isRecurring),
         isTest: Boolean(input.isTest),
         partnerPaymentStatus,
+        ...(partnerPaymentStatus === PaymentStatus.PAID ? { paidAt: new Date() } : {}),
         status,
         additionalInstructions: buildManualInstructions(input.additionalInstructions),
         ...(input.gatewayTransactionId?.trim()

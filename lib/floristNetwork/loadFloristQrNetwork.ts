@@ -137,6 +137,7 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
                 coordinatorFloristId: true,
                 partnerPaymentStatus: true,
                 veraWorkflowFlags: true,
+                paidAt: true,
             },
         }),
         // Coordinamento: mese CONSEGNA. Eleggibilità in JS (mai NOT IN su null).

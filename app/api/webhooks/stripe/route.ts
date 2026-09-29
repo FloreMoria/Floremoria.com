@@ -159,12 +159,16 @@ export async function POST(request: Request) {
         }
     }
 
+    // paidAt = istante contabile reale (balance txn) o ora evento webhook.
+    const paidAt = balanceDate;
+
     const markPaid = await prisma.order.updateMany({
         where: { id: orderId, partnerPaymentStatus: { not: 'PAID' } },
         data: {
             partnerPaymentStatus: 'PAID',
             status: 'ACCEPTED',
             deletedAt: null,
+            paidAt,
             grossAmount: grossAmountVal,
             stripeFee: stripeFeeVal,
             netAmount: netAmountVal,
@@ -174,6 +178,14 @@ export async function POST(request: Request) {
     });
 
     const isFirstPaidTransition = markPaid.count > 0;
+
+    // Idempotenza: se già PAID ma paidAt assente (ordini storici post-deploy), completa il campo.
+    if (!isFirstPaidTransition) {
+        await prisma.order.updateMany({
+            where: { id: orderId, partnerPaymentStatus: 'PAID', paidAt: null },
+            data: { paidAt },
+        });
+    }
 
     const order = await prisma.order.findUnique({
         where: { id: orderId },

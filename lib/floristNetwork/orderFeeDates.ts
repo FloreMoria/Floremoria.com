@@ -13,14 +13,19 @@ export function readVeraFlags(raw: unknown): Record<string, unknown> {
 
 /**
  * Istante di pagamento ordine.
- * Priorità: customerNotifyPaidAt (flag post-webhook) → createdAt se PAID.
- * Perché: non esiste colonna paidAt dedicata; il flag è la fonte più fedele.
+ * Priorità: Order.paidAt (webhook Stripe / create pagato) →
+ * customerNotifyPaidAt (legacy) → createdAt se PAID.
  */
 export function resolveOrderPaymentAt(order: {
+    paidAt?: Date | string | null;
     veraWorkflowFlags?: unknown;
     partnerPaymentStatus?: string | null;
     createdAt: Date | string;
 }): Date | null {
+    if (order.paidAt) {
+        const d = order.paidAt instanceof Date ? order.paidAt : new Date(order.paidAt);
+        if (!Number.isNaN(d.getTime())) return d;
+    }
     const flags = readVeraFlags(order.veraWorkflowFlags);
     const paidRaw = flags.customerNotifyPaidAt;
     if (typeof paidRaw === 'string' && paidRaw.trim()) {

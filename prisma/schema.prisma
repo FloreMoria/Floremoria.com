@@ -226,6 +226,11 @@ model Order {
    */
   partnerNotifyEmail     String?           @map("partner_notify_email") @db.VarChar(255)
   partnerPaymentStatus   PaymentStatus     @default(UNPAID)
+  /**
+   * Istante reale di pagamento (Stripe checkout.session.completed / balance txn,
+   * o creazione B2B già pagata). Fonte primaria per mese fee QR (Art. 9).
+   */
+  paidAt                 DateTime?         @map("paid_at")
   orderNumber            String?           @unique
   deliveryProvince       String?           @db.VarChar(2)
   /** Codice corto per link WhatsApp post-consegna (/f/{code}). */

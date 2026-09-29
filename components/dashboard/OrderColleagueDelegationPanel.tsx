@@ -27,6 +27,10 @@ type Props = {
     onOrderUpdated?: (updated: Record<string, unknown>) => void;
 };
 
+/**
+ * Leader ACTIVE + ordine assegnato a lui + provincia nella zona.
+ * Nessun filtro su status: vale anche COMPLETED / DELIVERING (staff può spuntare a posteriori).
+ */
 function isLeaderZoneOrder(order: Props['order']): boolean {
     const p = order.partner;
     if (!p || p.networkRole !== 'LEADER' || p.networkStatus !== 'ACTIVE') return false;
@@ -38,7 +42,7 @@ function isLeaderZoneOrder(order: Props['order']): boolean {
 
 /**
  * Spunta «Affidato a collega» + riquadro esecuzione (Operazione 4).
- * Solo Admin/SA su ordini del Leader nella sua zona.
+ * Solo Admin/SA su ordini del Leader nella sua zona (qualsiasi stato, incluso COMPLETED).
  */
 export default function OrderColleagueDelegationPanel({ order, canEdit, onOrderUpdated }: Props) {
     const inZone = isLeaderZoneOrder(order);
@@ -48,6 +52,7 @@ export default function OrderColleagueDelegationPanel({ order, canEdit, onOrderU
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Visibile se in zona Leader (anche COMPLETED) oppure già affidato (storico).
     if (!inZone && !delegated) return null;
 
     const feeLabel = formatEuroFromCents(order.coordinationFeeCents || 0);

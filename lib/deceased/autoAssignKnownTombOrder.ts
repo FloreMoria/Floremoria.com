@@ -31,6 +31,7 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
             cemeteryCity: true,
             cemeteryName: true,
             partnerId: true,
+            deliveryProvince: true,
         },
     });
 
@@ -85,6 +86,13 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
 
     if (!partnerId) {
         partnerId = await findFloristByCemeteryCoverage(order.cemeteryCity);
+    }
+
+    // Operazione 4: in zona Leader ACTIVE la priorità è l’affido al Leader (prima della notifica).
+    const { findActiveZoneLeader } = await import('@/lib/floristNetwork/findZoneLeader');
+    const zoneLeader = await findActiveZoneLeader(order.deliveryProvince);
+    if (zoneLeader) {
+        partnerId = zoneLeader.id;
     }
 
     if (!partnerId) {

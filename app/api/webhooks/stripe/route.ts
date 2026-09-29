@@ -227,21 +227,21 @@ export async function POST(request: Request) {
             console.error('[stripe-webhook] Allineamento User/Defunto fallito (non bloccante):', entityErr);
         });
 
-        await runVeraPostPaymentWorkflow(orderId, balanceDate).catch((wfErr) => {
-            console.error('[stripe-webhook] Workflow VERA post-pagamento fallito (non bloccante):', wfErr);
-        });
-
+        // Assegnazione prima delle notifiche: tomba/coverage, poi Leader di zona (Op4).
+        // Così il Punto A arriva al fiorista definitivo (es. Battistella in FVG).
         await autoAssignKnownTombOrder(orderId).catch((autoErr) => {
             console.error('[stripe-webhook] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
         });
 
-        // Affido Leader di zona (Operazione 4): dopo tomb/coverage, vince sulla provincia affidata.
-        // Non tocca referral QR. Skip se nessun Leader ACTIVE sulla deliveryProvince.
         const { assignZoneLeaderOnPaid } = await import(
             '@/lib/floristNetwork/assignZoneLeaderOnPaid'
         );
         await assignZoneLeaderOnPaid(orderId).catch((zoneErr) => {
             console.error('[stripe-webhook] Affido Leader di zona fallito (non bloccante):', zoneErr);
+        });
+
+        await runVeraPostPaymentWorkflow(orderId, balanceDate).catch((wfErr) => {
+            console.error('[stripe-webhook] Workflow VERA post-pagamento fallito (non bloccante):', wfErr);
         });
 
         // Scrittura Prima Nota contabile (Finance / Contabilità)

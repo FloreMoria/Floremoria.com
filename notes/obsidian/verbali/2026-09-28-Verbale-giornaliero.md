@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 28 Settembre 2026"
 sync_source: docs/verbali/28-09-2026.md
-synced_at: 2026-09-29T03:00:02.139Z
+synced_at: 2026-09-29T21:57:31.765Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -35,7 +35,6 @@ synced_at: 2026-09-29T03:00:02.139Z
 - `7615760e` feat(dashboard): marca ordine esistente isTest+FLOREMORIA con audit log _(FloreMoria)_
 - `4b2c9ad9` fix(florist-network): cookie .floremoria.com, webhook async e idempotenza fee _(FloreMoria)_
 - `a5ea5b9d` fix(vera): risoluzione amnesia loop, mismatch categorie piante, false escalation e prompt leak _(FloreMoria)_
-- [2026-09-28 23:33] rules: aggiunta mail-digest-quotidiano.mdc (esame mail ogni giorno) + cross-ref in log-verbali-append.
 
 ## Sezione 4 — Logistica
 

@@ -235,6 +235,15 @@ export async function POST(request: Request) {
             console.error('[stripe-webhook] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
         });
 
+        // Affido Leader di zona (Operazione 4): dopo tomb/coverage, vince sulla provincia affidata.
+        // Non tocca referral QR. Skip se nessun Leader ACTIVE sulla deliveryProvince.
+        const { assignZoneLeaderOnPaid } = await import(
+            '@/lib/floristNetwork/assignZoneLeaderOnPaid'
+        );
+        await assignZoneLeaderOnPaid(orderId).catch((zoneErr) => {
+            console.error('[stripe-webhook] Affido Leader di zona fallito (non bloccante):', zoneErr);
+        });
+
         // Scrittura Prima Nota contabile (Finance / Contabilità)
         if (grossAmountVal && grossAmountVal > 0) {
             try {

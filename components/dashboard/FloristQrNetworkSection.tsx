@@ -56,7 +56,8 @@ function MonthBlock({
                                 <th className="text-left px-3 py-2 font-bold">Ordine</th>
                                 <th className="text-left px-3 py-2 font-bold">Data</th>
                                 <th className="text-right px-3 py-2 font-bold">Importo</th>
-                                <th className="text-right px-3 py-2 font-bold">Fee</th>
+                                <th className="text-right px-3 py-2 font-bold">Fee QR</th>
+                                <th className="text-left px-3 py-2 font-bold">Affido</th>
                                 <th className="text-left px-3 py-2 font-bold">Stato fee</th>
                             </tr>
                         </thead>
@@ -82,6 +83,15 @@ function MonthBlock({
                                     </td>
                                     <td className="px-3 py-2 text-right font-semibold text-violet-800">
                                         {formatEuroFromCents(o.referralFeeCents)}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                        {o.delegatedToColleague ? (
+                                            <span className="font-semibold text-emerald-800">
+                                                Collega · {formatEuroFromCents(o.coordinationFeeCents)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500">Leader</span>
+                                        )}
                                     </td>
                                     <td className="px-3 py-2">
                                         <span

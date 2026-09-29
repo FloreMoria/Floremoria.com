@@ -510,6 +510,18 @@ export async function POST(request: Request) {
                 });
             }
 
+            if (partnerAlreadyPaid) {
+                const { assignZoneLeaderOnPaid } = await import(
+                    '@/lib/floristNetwork/assignZoneLeaderOnPaid'
+                );
+                await assignZoneLeaderOnPaid(createdOrder.id).catch((zoneErr) => {
+                    console.error(
+                        '[B2B Partner API] Affido Leader di zona fallito (non bloccante):',
+                        zoneErr
+                    );
+                });
+            }
+
             logPartnerOrderIngestion({
                 source: 'api_v1_partner_order_create',
                 orderId: createdOrder.id,

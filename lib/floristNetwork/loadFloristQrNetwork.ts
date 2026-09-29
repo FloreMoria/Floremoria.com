@@ -17,6 +17,8 @@ export type FloristQrNetworkOrderRow = {
     feeStatusLabel: string;
     /** true = conteggiato nei totali mese (Art. 3.3). */
     inTotals: boolean;
+    delegatedToColleague: boolean;
+    coordinationFeeCents: number;
 };
 
 export type FloristQrNetworkMonthSummary = {
@@ -68,6 +70,8 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
                 isTest: true,
                 cancellationCause: true,
                 deletedAt: true,
+                coordinationFeeCents: true,
+                coordinatorFloristId: true,
             },
         }),
         prisma.order.aggregate({
@@ -77,6 +81,7 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
                 deletedAt: null,
                 isTest: false,
                 status: { not: 'CANCELLED' },
+                cancellationCause: { notIn: ['CUSTOMER', 'FLORIST'] },
             },
             _sum: { coordinationFeeCents: true },
             _count: { _all: true },
@@ -104,6 +109,10 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
                 orderStatus: o.status,
                 feeStatusLabel: fee.label,
                 inTotals: isQrFeeEligibleForTotals(o),
+                delegatedToColleague: Boolean(
+                    o.coordinatorFloristId && (o.coordinationFeeCents || 0) > 0
+                ),
+                coordinationFeeCents: o.coordinationFeeCents || 0,
             };
         }),
     } satisfies FloristQrNetworkMonthSummary;

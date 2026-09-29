@@ -40,6 +40,68 @@ export async function PATCH(request: Request, context: any) {
         if (body.ticketMessage !== undefined) data.ticketMessage = body.ticketMessage;
         if (body.additionalInstructions !== undefined) data.additionalInstructions = body.additionalInstructions;
 
+        const previous = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: {
+                floristCompensationCents: true,
+                coordinatorFloristId: true,
+                coordinationFeeCents: true,
+                partnerId: true,
+                isTest: true,
+                status: true,
+                cancellationCause: true,
+                deletedAt: true,
+                deliveryProvince: true,
+            },
+        });
+
+        // Se già affidato a collega, ricalcola il 10% al cambio compenso (Operazione 4).
+        if (
+            previous &&
+            data.floristCompensationCents !== undefined &&
+            previous.coordinatorFloristId &&
+            (previous.coordinationFeeCents || 0) > 0
+        ) {
+            const { resolveColleagueDelegation } = await import(
+                '@/lib/floristNetwork/colleagueDelegation'
+            );
+            const { writeAdminFieldChangeLog } = await import('@/lib/admin/adminFieldChangeLog');
+            const resolved = await resolveColleagueDelegation({
+                delegatedToColleague: true,
+                partnerId: previous.partnerId,
+                floristCompensationCents: data.floristCompensationCents,
+                isTest: previous.isTest,
+                status: previous.status,
+                cancellationCause: previous.cancellationCause,
+                deletedAt: previous.deletedAt,
+            });
+            if (resolved.coordinatorFloristId) {
+                data.coordinatorFlorist = { connect: { id: resolved.coordinatorFloristId } };
+            } else if (previous.coordinatorFloristId) {
+                data.coordinatorFlorist = { disconnect: true };
+            }
+            data.coordinationFeeCents = resolved.coordinationFeeCents;
+
+            await writeAdminFieldChangeLog({
+                actorUserId: auth.userId,
+                actorRole: auth.role,
+                entityType: 'Order',
+                entityId: orderId,
+                field: 'floristCompensationCents',
+                before: previous.floristCompensationCents,
+                after: data.floristCompensationCents,
+            }).catch(() => undefined);
+            await writeAdminFieldChangeLog({
+                actorUserId: auth.userId,
+                actorRole: auth.role,
+                entityType: 'Order',
+                entityId: orderId,
+                field: 'coordinationFeeCents',
+                before: previous.coordinationFeeCents,
+                after: resolved.coordinationFeeCents,
+            }).catch(() => undefined);
+        }
+
         const updatedOrder = await prisma.order.update({
             where: { id: orderId },
             data,

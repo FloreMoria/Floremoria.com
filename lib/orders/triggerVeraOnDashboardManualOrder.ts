@@ -32,6 +32,14 @@ export async function runVeraAfterDashboardManualOrder(input: {
             return { assigned: false as const, reason: 'auto_assign_error' };
         });
 
+        // Affido Leader di zona (Operazione 4) — dopo tomb/coverage.
+        const { assignZoneLeaderOnPaid } = await import(
+            '@/lib/floristNetwork/assignZoneLeaderOnPaid'
+        );
+        await assignZoneLeaderOnPaid(input.orderId).catch((err) => {
+            console.error('[vera-workflow] assignZoneLeaderOnPaid fallita:', err);
+        });
+
         const order = await prisma.order.findFirst({
             where: { id: input.orderId, deletedAt: null },
             select: {

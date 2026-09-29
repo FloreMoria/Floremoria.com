@@ -66,9 +66,31 @@ export default async function FloristDossierPage({ params }: { params: { id: str
 
     const activeOrders = partner.orders.filter((o) => o.status !== 'CANCELLED' && !o.deletedAt).length;
 
+    // Nested `orders` non includono `partner`: lo attacchiamo così la spunta
+    // «Affidato a collega» resta visibile anche su COMPLETED aperti dal dossier.
+    const partnerZoneFields = {
+        id: partner.id,
+        shopName: partner.shopName,
+        ownerName: partner.ownerName,
+        networkRole: partner.networkRole,
+        networkStatus: partner.networkStatus,
+        assignedProvinces: partner.assignedProvinces,
+    };
+    const ordersWithPartner = partner.orders.map((o) => ({
+        ...o,
+        partner: partnerZoneFields,
+    }));
+
     const florists = await prisma.partner.findMany({
         where: { deletedAt: null, isActive: true },
-        select: { id: true, shopName: true, ownerName: true },
+        select: {
+            id: true,
+            shopName: true,
+            ownerName: true,
+            networkRole: true,
+            networkStatus: true,
+            assignedProvinces: true,
+        },
     });
 
     const linkedAgenciesRaw = await prisma.partner.findMany({
@@ -231,7 +253,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
 
                     <ClientFloristDossier
                         partner={partner}
-                        orders={partner.orders.map(enrichOrderWithShareableLinks)}
+                        orders={ordersWithPartner.map(enrichOrderWithShareableLinks)}
                         florists={florists}
                         canViewQrNetwork={canViewQrNetwork}
                     />

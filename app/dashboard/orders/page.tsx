@@ -74,7 +74,14 @@ export default async function OrdersPage({
 
     let ordersData: any[] = [];
     let abandonedOrdersData: any[] = [];
-    let florists: Array<{ id: string; shopName: string; ownerName: string | null }> = [];
+    let florists: Array<{
+        id: string;
+        shopName: string;
+        ownerName: string | null;
+        networkRole?: string | null;
+        networkStatus?: string | null;
+        assignedProvinces?: string[];
+    }> = [];
     let products: any[] = [];
     let dashboardUsers: any[] = [];
     let deceasedProfiles: any[] = [];
@@ -145,7 +152,14 @@ export default async function OrdersPage({
             prisma.partner.findMany({
                 where: { deletedAt: null, isB2B: false },
                 orderBy: { shopName: 'asc' },
-                select: { id: true, shopName: true, ownerName: true },
+                select: {
+                    id: true,
+                    shopName: true,
+                    ownerName: true,
+                    networkRole: true,
+                    networkStatus: true,
+                    assignedProvinces: true,
+                },
             })
         );
         florists = floristsResult.data;

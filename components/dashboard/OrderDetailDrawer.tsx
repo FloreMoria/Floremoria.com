@@ -8,6 +8,7 @@ import OrderDetailProofUpload from './OrderDetailProofUpload';
 import ShareableLinkPanel from './ShareableLinkPanel';
 import FloristScoutPanel from './FloristScoutPanel';
 import OrderQrOriginPanel from './OrderQrOriginPanel';
+import OrderColleagueDelegationPanel from './OrderColleagueDelegationPanel';
 import DeliveryCountdownBadge from './DeliveryCountdownBadge';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
@@ -463,6 +464,16 @@ export default function OrderDetailDrawer({
                     )}
 
                     {canViewQrNetwork ? <OrderQrOriginPanel order={localOrder} /> : null}
+                    {canViewQrNetwork ? (
+                        <OrderColleagueDelegationPanel
+                            order={localOrder}
+                            canEdit={Boolean(canViewQrNetwork)}
+                            onOrderUpdated={(updated) => {
+                                setLocalOrder((prev: any) => ({ ...prev, ...updated }));
+                                onOrderUpdated?.(updated);
+                            }}
+                        />
+                    ) : null}
 
                     {/* FLOW STATO */}
                     <div className="space-y-3">

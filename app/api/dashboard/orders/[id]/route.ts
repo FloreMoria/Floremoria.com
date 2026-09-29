@@ -13,6 +13,8 @@ import {
     isWorkflowStepDone,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { resolveColleagueDelegation } from '@/lib/floristNetwork/colleagueDelegation';
+import { isOrderInLeaderZone } from '@/lib/floristNetwork/findZoneLeader';
 
 export const maxDuration = 120;
 
@@ -22,6 +24,10 @@ const CANCELLATION_CAUSES = new Set<OrderCancellationCause>([
     'FLOREMORIA',
     'OTHER',
 ]);
+
+function isQrAdminRole(role: string): boolean {
+    return role === 'ADMIN' || role === 'SUPER_ADMIN';
+}
 
 export async function PUT(request: Request, context: any) {
     const auth = await requireDashboardAdmin();
@@ -42,37 +48,47 @@ export async function PUT(request: Request, context: any) {
                 isTest: true,
                 cancellationCause: true,
                 veraWorkflowFlags: true,
+                floristCompensationCents: true,
+                coordinatorFloristId: true,
+                coordinationFeeCents: true,
+                deliveryProvince: true,
+                deletedAt: true,
             },
         });
 
-        // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
-        const safeData: any = {};
-        
+        const safeData: Record<string, unknown> = {};
+
         const validKeys = [
-            'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
-            'gravePosition', 'deliveryDate', 'deceasedName', 
-            'deceasedBirthDate', 'deceasedDeathDate', 'additionalInstructions', 'status',
-            'buyerFullName', 'customerPhone', 'totalPriceCents',
+            'partnerPaymentStatus',
+            'cemeteryName',
+            'cemeteryCity',
+            'gravePosition',
+            'deliveryDate',
+            'deceasedName',
+            'deceasedBirthDate',
+            'deceasedDeathDate',
+            'additionalInstructions',
+            'status',
+            'buyerFullName',
+            'customerPhone',
+            'totalPriceCents',
         ];
 
-        validKeys.forEach(k => {
+        validKeys.forEach((k) => {
             if (body[k] !== undefined) {
-                // Parse date columns safely (handling ISO strings, IT formats, or empty strings/nulls)
                 if (k === 'deceasedBirthDate' || k === 'deceasedDeathDate' || k === 'deliveryDate') {
                     if (body[k] === null || (typeof body[k] === 'string' && body[k].trim() === '')) {
                         safeData[k] = null;
                     } else if (body[k]) {
                         const parsedDate = new Date(body[k]);
-                        if (isNaN(parsedDate.getTime())) {
-                            safeData[k] = null;
-                        } else {
-                            safeData[k] = parsedDate;
-                        }
+                        safeData[k] = Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
                     }
                 } else if (k === 'deceasedName') {
                     safeData.deceasedName = body.deceasedName ? formatDeceasedName(body.deceasedName) : '';
                 } else if (k === 'buyerFullName') {
-                    safeData.buyerFullName = body.buyerFullName ? formatPersonName(body.buyerFullName) : null;
+                    safeData.buyerFullName = body.buyerFullName
+                        ? formatPersonName(body.buyerFullName)
+                        : null;
                 } else {
                     safeData[k] = body[k];
                 }
@@ -85,29 +101,33 @@ export async function PUT(request: Request, context: any) {
             safeData.ticketMessage = raw ? String(raw) : null;
         }
 
-        // Gestione note / istruzioni aggiuntive (specialNotes nel frontend mappato su additionalInstructions nel DB)
         if (body.specialNotes !== undefined || body.additionalInstructions !== undefined) {
-            let newNotes = body.specialNotes !== undefined ? body.specialNotes : body.additionalInstructions;
-            
-            // Protegge i metadati B2B Stripe da sovrascritture accidentali da parte del personale di backoffice
+            let newNotes =
+                body.specialNotes !== undefined ? body.specialNotes : body.additionalInstructions;
+
             try {
                 const existingOrder = await prisma.order.findUnique({
                     where: { id },
-                    select: { additionalInstructions: true }
+                    select: { additionalInstructions: true },
                 });
-                if (existingOrder?.additionalInstructions && existingOrder.additionalInstructions.includes('---B2B_STRIPE_METADATA---')) {
+                if (
+                    existingOrder?.additionalInstructions &&
+                    existingOrder.additionalInstructions.includes('---B2B_STRIPE_METADATA---')
+                ) {
                     const parts = existingOrder.additionalInstructions.split('---B2B_STRIPE_METADATA---');
                     const metadataBlock = parts[1];
-                    newNotes = newNotes.trim() + `\n\n---B2B_STRIPE_METADATA---\n` + metadataBlock.trim();
+                    newNotes =
+                        String(newNotes).trim() +
+                        `\n\n---B2B_STRIPE_METADATA---\n` +
+                        metadataBlock.trim();
                 }
             } catch (err) {
                 console.error('Error preserving B2B Stripe metadata:', err);
             }
-            
+
             safeData.additionalInstructions = newNotes;
         }
 
-        // Normalizzazione e validazione dello stato ordine rispetto all'enum Prisma
         if (body.status !== undefined) {
             let s = String(body.status).trim();
             if (s === 'WAITING') s = 'PENDING';
@@ -129,7 +149,6 @@ export async function PUT(request: Request, context: any) {
             }
         }
 
-        // Gestione relazioni annidate in Prisma per evitare l'errore P2025 in assenza di relazione precedente
         if (body.partnerId !== undefined) {
             if (body.partnerId && String(body.partnerId).trim()) {
                 safeData.partner = { connect: { id: String(body.partnerId).trim() } };
@@ -145,7 +164,6 @@ export async function PUT(request: Request, context: any) {
             }
         }
 
-        // Sandbox / smoke: marca ordine esistente come test (+ causa cancellazione rete).
         if (body.isTest !== undefined) {
             safeData.isTest = Boolean(body.isTest);
         }
@@ -160,7 +178,28 @@ export async function PUT(request: Request, context: any) {
             }
         }
 
-        // Marca isTest → ferma Punto A pendente (flush cron non deve notificare il fiorista).
+        if (body.floristCompensationCents !== undefined && isQrAdminRole(auth.role)) {
+            if (body.floristCompensationCents === null || body.floristCompensationCents === '') {
+                safeData.floristCompensationCents = null;
+            } else {
+                const n = Number(body.floristCompensationCents);
+                if (Number.isFinite(n) && n >= 0) {
+                    safeData.floristCompensationCents = Math.round(n);
+                }
+            }
+        }
+
+        let wantsDelegationToggle: boolean | undefined;
+        if (body.delegatedToColleague !== undefined) {
+            if (!isQrAdminRole(auth.role)) {
+                return NextResponse.json(
+                    { error: 'Solo Admin / Super Admin possono modificare l’affido a collega.' },
+                    { status: 403 }
+                );
+            }
+            wantsDelegationToggle = Boolean(body.delegatedToColleague);
+        }
+
         if (safeData.isTest === true && previousOrder && !previousOrder.isTest) {
             const flags = parseWorkflowFlags(previousOrder.veraWorkflowFlags);
             if (!isWorkflowStepDone(flags, 'puntoA_florist')) {
@@ -178,51 +217,134 @@ export async function PUT(request: Request, context: any) {
             return NextResponse.json(cancelled);
         }
 
+        const nextPartnerId =
+            body.partnerId !== undefined
+                ? body.partnerId && String(body.partnerId).trim()
+                    ? String(body.partnerId).trim()
+                    : null
+                : previousOrder?.partnerId || null;
+        const nextCompensation =
+            safeData.floristCompensationCents !== undefined
+                ? (safeData.floristCompensationCents as number | null)
+                : previousOrder?.floristCompensationCents;
+        const currentlyDelegated = Boolean(
+            previousOrder?.coordinatorFloristId && (previousOrder?.coordinationFeeCents || 0) > 0
+        );
+        const delegatedDesired =
+            wantsDelegationToggle !== undefined ? wantsDelegationToggle : currentlyDelegated;
+
+        if (wantsDelegationToggle !== undefined || safeData.floristCompensationCents !== undefined) {
+            const zone = await isOrderInLeaderZone({
+                partnerId: nextPartnerId,
+                deliveryProvince: previousOrder?.deliveryProvince,
+            });
+            if (wantsDelegationToggle === true && !zone.ok) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Spunta «Affidato a collega» disponibile solo su ordini assegnati al Leader nella sua zona.',
+                    },
+                    { status: 400 }
+                );
+            }
+            const resolved = await resolveColleagueDelegation({
+                delegatedToColleague: zone.ok ? delegatedDesired : false,
+                partnerId: nextPartnerId,
+                floristCompensationCents: nextCompensation,
+                isTest: safeData.isTest !== undefined ? Boolean(safeData.isTest) : previousOrder?.isTest,
+                status: (safeData.status as string) || previousOrder?.status,
+                cancellationCause:
+                    safeData.cancellationCause !== undefined
+                        ? (safeData.cancellationCause as OrderCancellationCause | null)
+                        : previousOrder?.cancellationCause,
+                deletedAt: previousOrder?.deletedAt,
+            });
+            safeData.coordinationFeeCents = resolved.coordinationFeeCents;
+            if (resolved.coordinatorFloristId === null) {
+                if (previousOrder?.coordinatorFloristId) {
+                    safeData.coordinatorFlorist = { disconnect: true };
+                }
+            } else {
+                safeData.coordinatorFlorist = { connect: { id: resolved.coordinatorFloristId } };
+            }
+        }
+
         let updatedOrder;
         try {
             updatedOrder = await prisma.order.update({
                 where: { id },
-                data: safeData
+                data: safeData,
             });
-        } catch (dbError: any) {
+        } catch (dbError: unknown) {
+            const message = dbError instanceof Error ? dbError.message : String(dbError);
             console.error('[orders-put] Errore prisma.order.update:', dbError);
             return NextResponse.json(
-                { error: 'Errore aggiornamento stato nel database', details: dbError?.message || String(dbError) },
+                { error: 'Errore aggiornamento stato nel database', details: message },
                 { status: 500 }
             );
         }
 
-        // Audit trail campi sensibili (admin_field_change_logs).
         const auditJobs: Promise<void>[] = [];
-        if (previousOrder && safeData.isTest !== undefined && safeData.isTest !== previousOrder.isTest) {
+        const pushAudit = (field: string, before: unknown, after: unknown) => {
+            if (Object.is(before, after)) return;
+            if (before === after) return;
             auditJobs.push(
                 writeAdminFieldChangeLog({
                     actorUserId: auth.userId,
                     actorRole: auth.role,
                     entityType: 'Order',
                     entityId: id,
-                    field: 'isTest',
-                    before: previousOrder.isTest,
-                    after: updatedOrder.isTest,
+                    field,
+                    before,
+                    after,
                 })
             );
-        }
-        if (
-            previousOrder &&
-            safeData.cancellationCause !== undefined &&
-            safeData.cancellationCause !== previousOrder.cancellationCause
-        ) {
-            auditJobs.push(
-                writeAdminFieldChangeLog({
-                    actorUserId: auth.userId,
-                    actorRole: auth.role,
-                    entityType: 'Order',
-                    entityId: id,
-                    field: 'cancellationCause',
-                    before: previousOrder.cancellationCause,
-                    after: updatedOrder.cancellationCause,
-                })
-            );
+        };
+
+        if (previousOrder) {
+            if (safeData.isTest !== undefined) {
+                pushAudit('isTest', previousOrder.isTest, updatedOrder.isTest);
+            }
+            if (safeData.cancellationCause !== undefined) {
+                pushAudit(
+                    'cancellationCause',
+                    previousOrder.cancellationCause,
+                    updatedOrder.cancellationCause
+                );
+            }
+            if (body.partnerId !== undefined) {
+                pushAudit('partnerId', previousOrder.partnerId, updatedOrder.partnerId);
+            }
+            if (safeData.floristCompensationCents !== undefined) {
+                pushAudit(
+                    'floristCompensationCents',
+                    previousOrder.floristCompensationCents,
+                    updatedOrder.floristCompensationCents
+                );
+            }
+            if (
+                wantsDelegationToggle !== undefined ||
+                safeData.floristCompensationCents !== undefined
+            ) {
+                pushAudit(
+                    'delegatedToColleague',
+                    currentlyDelegated,
+                    Boolean(
+                        updatedOrder.coordinatorFloristId &&
+                            (updatedOrder.coordinationFeeCents || 0) > 0
+                    )
+                );
+                pushAudit(
+                    'coordinatorFloristId',
+                    previousOrder.coordinatorFloristId,
+                    updatedOrder.coordinatorFloristId
+                );
+                pushAudit(
+                    'coordinationFeeCents',
+                    previousOrder.coordinationFeeCents,
+                    updatedOrder.coordinationFeeCents
+                );
+            }
         }
         if (auditJobs.length > 0) {
             await Promise.all(auditJobs).catch((auditErr) => {
@@ -230,13 +352,13 @@ export async function PUT(request: Request, context: any) {
             });
         }
 
-        const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
+        const nextStatus =
+            typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
 
         const partnerAssignedOrChanged =
             body.partnerId !== undefined && body.partnerId !== previousOrder?.partnerId;
         const statusChanged = nextStatus && nextStatus !== previousOrder?.status;
 
-        // Scatena Punto A/B: await obbligatorio su Vercel (void veniva killato a fine response).
         if (statusChanged || partnerAssignedOrChanged) {
             try {
                 await onOrderStatusChanged(id, nextStatus || 'IN_PROGRESS');
@@ -258,7 +380,6 @@ export async function PUT(request: Request, context: any) {
             (previousOrder?.veraAlertType === 'grave_position_missing' ||
                 previousOrder?.veraAlertType === 'punto_a_send_failed');
 
-        // Sblocca e reinizia Punto A se la posizione c'è (anche se era già compilata).
         if (graveJustFilled || gravePresentWithStaleAlert) {
             void clearVeraOperationalAlert(id)
                 .then(() => retryPuntoAIfBlocked(id))
@@ -268,10 +389,11 @@ export async function PUT(request: Request, context: any) {
         }
 
         return NextResponse.json(updatedOrder);
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         console.error('Error updating order:', error);
         return NextResponse.json(
-            { error: 'Errore aggiornamento stato nel database', details: error?.message || String(error) },
+            { error: 'Errore aggiornamento stato nel database', details: message },
             { status: 500 }
         );
     }

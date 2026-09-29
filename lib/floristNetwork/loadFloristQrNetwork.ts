@@ -1,5 +1,9 @@
 import prisma from '@/lib/prisma';
 import {
+    isCoordinationFeeEligibleForTotals,
+    resolveCoordinationFeeStatus,
+} from '@/lib/floristNetwork/colleagueDelegation';
+import {
     currentAndPreviousMonthRome,
     floristPublicQrUrl,
     formatEuroFromCents,
@@ -21,6 +25,17 @@ export type FloristQrNetworkOrderRow = {
     coordinationFeeCents: number;
 };
 
+export type FloristDelegatedOrderRow = {
+    orderNumber: string;
+    /** ISO data consegna (o null se assente). */
+    deliveryDate: string | null;
+    floristCompensationCents: number;
+    coordinationFeeCents: number;
+    orderStatus: string;
+    statusLabel: string;
+    inTotals: boolean;
+};
+
 export type FloristQrNetworkMonthSummary = {
     year: number;
     monthIndex0: number;
@@ -28,7 +43,14 @@ export type FloristQrNetworkMonthSummary = {
     scansCount: number;
     qrOrdersCount: number;
     qrFeesCents: number;
+    /**
+     * Somma fee coordinamento eleggibili nel mese (bucket = deliveryDate).
+     * Prima di questo fix il KPI usava createdAt + NOT IN su cancellationCause
+     * (che in SQL escludeva anche i null → totali a 0).
+     */
     coordinationFeesCents: number;
+    /** Fee QR + coordinamento (solo eleggibili) per il mese. */
+    combinedFeesCents: number;
     /** Tutti gli ordini QR del mese (inclusi esclusi), per tracciabilità. */
     orders: FloristQrNetworkOrderRow[];
 };
@@ -45,12 +67,50 @@ export type FloristQrNetworkPayload = {
     preferredCities: string[];
     currentMonth: FloristQrNetworkMonthSummary;
     previousMonth: FloristQrNetworkMonthSummary;
+    /**
+     * Tutti gli ordini con coordinatorFloristId = Leader (nessun PII cliente).
+     * Ordinati per deliveryDate desc.
+     */
+    delegatedOrders: FloristDelegatedOrderRow[];
 };
+
+async function loadDelegatedOrders(partnerId: string): Promise<FloristDelegatedOrderRow[]> {
+    const rows = await prisma.order.findMany({
+        where: {
+            coordinatorFloristId: partnerId,
+            // Soft-deleted inclusi in elenco (marcati esclusi) per audit.
+        },
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+            orderNumber: true,
+            deliveryDate: true,
+            floristCompensationCents: true,
+            coordinationFeeCents: true,
+            status: true,
+            isTest: true,
+            cancellationCause: true,
+            deletedAt: true,
+        },
+    });
+
+    return rows.map((o) => {
+        const st = resolveCoordinationFeeStatus(o);
+        return {
+            orderNumber: o.orderNumber || '—',
+            deliveryDate: o.deliveryDate ? o.deliveryDate.toISOString() : null,
+            floristCompensationCents: o.floristCompensationCents || 0,
+            coordinationFeeCents: o.coordinationFeeCents || 0,
+            orderStatus: o.status,
+            statusLabel: st.label,
+            inTotals: st.inTotals && isCoordinationFeeEligibleForTotals(o),
+        };
+    });
+}
 
 async function summarizeMonth(partnerId: string, year: number, monthIndex0: number, label: string) {
     const { start, end } = monthBoundsUtc(year, monthIndex0);
 
-    const [scansCount, qrOrdersRaw, coordinationAgg] = await Promise.all([
+    const [scansCount, qrOrdersRaw, coordinationRaw] = await Promise.all([
         prisma.floristScanEvent.count({
             where: { floristId: partnerId, createdAt: { gte: start, lt: end } },
         }),
@@ -74,22 +134,29 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
                 coordinatorFloristId: true,
             },
         }),
-        prisma.order.aggregate({
+        // Coordinamento: mese della CONSEGNA (quello che il fiorista fattura).
+        // Prima: createdAt — e aggregate NOT IN escludeva cancellationCause null.
+        prisma.order.findMany({
             where: {
                 coordinatorFloristId: partnerId,
-                createdAt: { gte: start, lt: end },
-                deletedAt: null,
-                isTest: false,
-                status: { not: 'CANCELLED' },
-                cancellationCause: { notIn: ['CUSTOMER', 'FLORIST'] },
+                deliveryDate: { gte: start, lt: end },
             },
-            _sum: { coordinationFeeCents: true },
-            _count: { _all: true },
+            select: {
+                coordinationFeeCents: true,
+                status: true,
+                isTest: true,
+                cancellationCause: true,
+                deletedAt: true,
+            },
         }),
     ]);
 
     // Totali Art. 3.3: solo eleggibili. Elenco: tutti (test/annullati restano tracciabili).
     const eligible = qrOrdersRaw.filter((o) => isQrFeeEligibleForTotals(o));
+    const qrFeesCents = eligible.reduce((s, o) => s + (o.referralFeeCents || 0), 0);
+    const coordinationFeesCents = coordinationRaw
+        .filter((o) => isCoordinationFeeEligibleForTotals(o))
+        .reduce((s, o) => s + (o.coordinationFeeCents || 0), 0);
 
     return {
         year,
@@ -97,8 +164,9 @@ async function summarizeMonth(partnerId: string, year: number, monthIndex0: numb
         label,
         scansCount,
         qrOrdersCount: eligible.length,
-        qrFeesCents: eligible.reduce((s, o) => s + (o.referralFeeCents || 0), 0),
-        coordinationFeesCents: coordinationAgg._sum.coordinationFeeCents || 0,
+        qrFeesCents,
+        coordinationFeesCents,
+        combinedFeesCents: qrFeesCents + coordinationFeesCents,
         orders: qrOrdersRaw.map((o) => {
             const fee = resolveQrFeeStatus(o);
             return {
@@ -135,9 +203,10 @@ export async function loadFloristQrNetworkPayload(partnerId: string): Promise<Fl
     if (!partner) return null;
 
     const { current, previous } = currentAndPreviousMonthRome();
-    const [currentMonth, previousMonth] = await Promise.all([
+    const [currentMonth, previousMonth, delegatedOrders] = await Promise.all([
         summarizeMonth(partner.id, current.year, current.monthIndex0, current.label),
         summarizeMonth(partner.id, previous.year, previous.monthIndex0, previous.label),
+        loadDelegatedOrders(partner.id),
     ]);
 
     return {
@@ -152,6 +221,7 @@ export async function loadFloristQrNetworkPayload(partnerId: string): Promise<Fl
         preferredCities: partner.preferredCities || [],
         currentMonth,
         previousMonth,
+        delegatedOrders,
     };
 }
 

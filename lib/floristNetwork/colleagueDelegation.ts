@@ -41,8 +41,73 @@ export function isCoordinationFeeExcluded(order: {
     if (order.isTest) return true;
     if (order.cancellationCause === 'FLORIST') return true;
     if (order.cancellationCause === 'CUSTOMER') return true;
-    if (order.status === 'CANCELLED' && order.cancellationCause === 'CUSTOMER') return true;
+    if (order.status === 'CANCELLED') return true;
     return false;
+}
+
+/** True se la fee coordinamento entra nei totali prospetto (valida). */
+export function isCoordinationFeeEligibleForTotals(order: {
+    isTest?: boolean | null;
+    status?: OrderStatus | string | null;
+    cancellationCause?: OrderCancellationCause | string | null;
+    deletedAt?: Date | string | null;
+    coordinationFeeCents?: number | null;
+}): boolean {
+    if ((order.coordinationFeeCents ?? 0) <= 0) return false;
+    return !isCoordinationFeeExcluded(order);
+}
+
+export type CoordinationFeeStatusKind =
+    | 'valid'
+    | 'excluded_test'
+    | 'excluded_cancelled_customer'
+    | 'excluded_cancelled_florist'
+    | 'excluded_cancelled'
+    | 'excluded_deleted'
+    | 'none';
+
+/** Stato fee coordinamento per UI admin (nessun PII). */
+export function resolveCoordinationFeeStatus(order: {
+    isTest?: boolean | null;
+    status?: OrderStatus | string | null;
+    cancellationCause?: OrderCancellationCause | string | null;
+    deletedAt?: Date | string | null;
+    coordinationFeeCents?: number | null;
+}): { kind: CoordinationFeeStatusKind; label: string; inTotals: boolean } {
+    if (order.deletedAt) {
+        return { kind: 'excluded_deleted', label: 'escluso – eliminato', inTotals: false };
+    }
+    if (order.isTest) {
+        return { kind: 'excluded_test', label: 'escluso – test', inTotals: false };
+    }
+    if (order.status === 'CANCELLED' || order.cancellationCause === 'CUSTOMER') {
+        if (order.cancellationCause === 'CUSTOMER') {
+            return {
+                kind: 'excluded_cancelled_customer',
+                label: 'escluso – annullato cliente',
+                inTotals: false,
+            };
+        }
+        if (order.cancellationCause === 'FLORIST') {
+            return {
+                kind: 'excluded_cancelled_florist',
+                label: 'escluso – annullato fiorista',
+                inTotals: false,
+            };
+        }
+        return { kind: 'excluded_cancelled', label: 'escluso – annullato', inTotals: false };
+    }
+    if (order.cancellationCause === 'FLORIST') {
+        return {
+            kind: 'excluded_cancelled_florist',
+            label: 'escluso – errore fiorista',
+            inTotals: false,
+        };
+    }
+    if ((order.coordinationFeeCents ?? 0) > 0) {
+        return { kind: 'valid', label: 'valido', inTotals: true };
+    }
+    return { kind: 'none', label: 'nessun coordinamento', inTotals: false };
 }
 
 export type ColleagueDelegationState = {

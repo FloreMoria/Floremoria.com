@@ -53,6 +53,8 @@ export async function PUT(request: Request, context: any) {
                 coordinationFeeCents: true,
                 deliveryProvince: true,
                 deletedAt: true,
+                partnerPaymentStatus: true,
+                paidAt: true,
             },
         });
 
@@ -166,6 +168,16 @@ export async function PUT(request: Request, context: any) {
 
         if (body.isTest !== undefined) {
             safeData.isTest = Boolean(body.isTest);
+        }
+
+        // Pagamento marcato da staff: valorizza paidAt se assente (fonte secondaria vs webhook).
+        if (
+            safeData.partnerPaymentStatus === 'PAID' &&
+            previousOrder &&
+            previousOrder.partnerPaymentStatus !== 'PAID' &&
+            !previousOrder.paidAt
+        ) {
+            safeData.paidAt = new Date();
         }
         if (body.cancellationCause !== undefined) {
             if (body.cancellationCause === null || body.cancellationCause === '') {

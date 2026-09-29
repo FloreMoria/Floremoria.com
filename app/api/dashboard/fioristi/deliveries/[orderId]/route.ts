@@ -29,7 +29,9 @@ export async function PATCH(request: Request, context: any) {
         if (body.cemeteryCity !== undefined) data.cemeteryCity = body.cemeteryCity;
         if (body.gravePosition !== undefined) data.gravePosition = body.gravePosition;
         if (body.status !== undefined) data.status = body.status;
-        if (body.partnerPaymentStatus !== undefined) data.partnerPaymentStatus = body.partnerPaymentStatus;
+        if (body.partnerPaymentStatus !== undefined) {
+            data.partnerPaymentStatus = body.partnerPaymentStatus;
+        }
         if (body.floristSettlementStatus !== undefined) data.floristSettlementStatus = body.floristSettlementStatus;
         if (body.floristCompensationEuros !== undefined) {
             const euros = Number(body.floristCompensationEuros);
@@ -52,8 +54,19 @@ export async function PATCH(request: Request, context: any) {
                 cancellationCause: true,
                 deletedAt: true,
                 deliveryProvince: true,
+                partnerPaymentStatus: true,
+                paidAt: true,
             },
         });
+
+        if (
+            previous &&
+            data.partnerPaymentStatus === 'PAID' &&
+            previous.partnerPaymentStatus !== 'PAID' &&
+            !previous.paidAt
+        ) {
+            data.paidAt = new Date();
+        }
 
         // Se già affidato a collega, ricalcola il 10% al cambio compenso (Operazione 4).
         if (

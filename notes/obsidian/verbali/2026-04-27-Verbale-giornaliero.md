@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Revisione Terminologica \\"Piccoli Amici\\"."
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-09-30T12:22:27.694Z
+synced_at: 2026-10-01T09:55:19.312Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

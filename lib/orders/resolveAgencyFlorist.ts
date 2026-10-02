@@ -46,6 +46,7 @@ const AGENCY_SELECT = {
     id: true,
     shopName: true,
     uniqueCode: true,
+    slug: true,
     partnershipChannel: true,
     defaultFloristId: true,
     agencyNotificationEmail: true,
@@ -79,14 +80,17 @@ function toResolved(agency: {
 }
 
 /**
- * Cerca agenzia per id Partner o uniqueCode / agencyCode esterno.
+ * Cerca agenzia per id Partner, uniqueCode / agencyCode esterno, oppure nome/slug.
+ * Perché: AF spesso invia solo agencyName (es. "iof-san-marco") senza agencyId.
  */
 export async function findFuneralAgency(params: {
     agencyId?: string | null;
     agencyCode?: string | null;
+    agencyName?: string | null;
 }): Promise<ResolvedAgency | null> {
     const id = params.agencyId?.trim() || '';
     const code = params.agencyCode?.trim() || '';
+    const name = params.agencyName?.trim() || '';
 
     if (id) {
         const byId = await prisma.partner.findFirst({
@@ -112,6 +116,75 @@ export async function findFuneralAgency(params: {
             select: AGENCY_SELECT,
         });
         if (byCode) return toResolved(byCode);
+    }
+
+    if (name) {
+        const slugish = name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        const candidates = await prisma.partner.findMany({
+            where: {
+                deletedAt: null,
+                isActive: true,
+                partnerType: 'FUNERAL_AGENCY',
+                OR: [
+                    { uniqueCode: { equals: name, mode: 'insensitive' } },
+                    { shopName: { equals: name, mode: 'insensitive' } },
+                    ...(slugish
+                        ? [
+                              { uniqueCode: { equals: slugish, mode: 'insensitive' as const } },
+                              { slug: { equals: slugish, mode: 'insensitive' as const } },
+                          ]
+                        : []),
+                ],
+            },
+            select: AGENCY_SELECT,
+            take: 20,
+        });
+
+        if (candidates.length === 1) return toResolved(candidates[0]);
+
+        // Match slugificato su shopName (es. "IOF San Marco" ↔ "iof-san-marco").
+        if (slugish && candidates.length === 0) {
+            const agencies = await prisma.partner.findMany({
+                where: {
+                    deletedAt: null,
+                    isActive: true,
+                    partnerType: 'FUNERAL_AGENCY',
+                },
+                select: AGENCY_SELECT,
+                take: 500,
+            });
+            const matched = agencies.filter((a) => {
+                const shopSlug = a.shopName
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                return shopSlug === slugish || (a.uniqueCode || '').toLowerCase() === slugish;
+            });
+            if (matched.length === 1) return toResolved(matched[0]);
+        } else if (candidates.length > 1 && slugish) {
+            const exact = candidates.find((a) => {
+                const shopSlug = a.shopName
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                return (
+                    shopSlug === slugish ||
+                    (a.uniqueCode || '').toLowerCase() === slugish ||
+                    (a.uniqueCode || '').toLowerCase() === name.toLowerCase()
+                );
+            });
+            if (exact) return toResolved(exact);
+        }
     }
 
     return null;

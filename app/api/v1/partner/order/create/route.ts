@@ -316,8 +316,12 @@ export async function POST(request: Request) {
         }
 
         const resolvedAgency =
-            agencyIdBody || agencyCodeBody
-                ? await findFuneralAgency({ agencyId: agencyIdBody || null, agencyCode: agencyCodeBody || null })
+            agencyIdBody || agencyCodeBody || agencyNameBody
+                ? await findFuneralAgency({
+                      agencyId: agencyIdBody || null,
+                      agencyCode: agencyCodeBody || null,
+                      agencyName: agencyNameBody || null,
+                  })
                 : null;
 
         if ((agencyIdBody || agencyCodeBody) && !resolvedAgency) {
@@ -325,6 +329,13 @@ export async function POST(request: Request) {
                 { error: 'Agenzia non trovata per agencyId/agencyCode forniti.' },
                 { status: 400, headers: jsonHeaders(request) }
             );
+        }
+        // agencyName-only: soft-resolve (non 400 se non match — resta agencyName testuale).
+        if (agencyNameBody && !agencyIdBody && !agencyCodeBody && !resolvedAgency) {
+            console.warn('[B2B Partner API] agencyName non risolto a Partner FUNERAL_AGENCY', {
+                agencyName: agencyNameBody,
+                partnerId: auth.partnerId,
+            });
         }
 
         // Fiorista: default agenzia → copertura geografica; senza agenzia resta il partner API (legacy).

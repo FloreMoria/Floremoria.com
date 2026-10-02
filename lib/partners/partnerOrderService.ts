@@ -1,6 +1,6 @@
 /**
  * Ingestion ordini B2B via API REST — tre ruoli (master / agenzia / fiorista), fee % su master.
- * Stop scrittura su referralPartnerId (legacy sola lettura).
+ * referralPartnerId: alias di visibilità quando auth = AGGREGATOR (lista partner + registro commissioni).
  */
 import type { Partner, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
@@ -30,6 +30,12 @@ export type B2bOrderAssociationResult = {
     agencyCode: string | null;
     agencyName: string | null;
     masterPartnerId: string | null;
+    /**
+     * Alias di visibilità / commissioni:
+     * AGGREGATOR → auth.partnerId (stesso del master).
+     * Altrimenti null (masterPartnerId resta la fonte canonicà).
+     */
+    referralPartnerId: string | null;
     apiCredentialId: string | null;
     partnershipChannel: string | null;
     partnerCommissionCents: number | null;
@@ -63,6 +69,10 @@ export function resolveB2bOrderAssociations(input: B2bOrderAssociationInput): B2
         masterPartnerId = resolvedAgency.masterPartnerId;
     }
 
+    // Alias di visibilità: la GET partner filtra su referralPartnerId (oltre a masterPartnerId).
+    const referralPartnerId =
+        authPartner.partnerType === 'AGGREGATOR' ? authPartner.id : null;
+
     const feeCreditorId = masterPartnerId ?? (authPartner.partnerType === 'FUNERAL_AGENCY' ? agencyId : null);
     const percent = input.commissionPercentInclusive;
 
@@ -88,6 +98,7 @@ export function resolveB2bOrderAssociations(input: B2bOrderAssociationInput): B2
         agencyCode,
         agencyName,
         masterPartnerId,
+        referralPartnerId,
         apiCredentialId: input.apiCredentialId ?? null,
         partnershipChannel,
         partnerCommissionCents,
@@ -133,6 +144,7 @@ export function logPartnerOrderIngestion(ctx: PartnerOrderIngestionLogContext): 
         floristPartnerId: ctx.floristPartnerId,
         agencyId: ctx.association.agencyId,
         masterPartnerId: ctx.association.masterPartnerId,
+        referralPartnerId: ctx.association.referralPartnerId,
         apiCredentialId: ctx.association.apiCredentialId,
         partnershipChannel: ctx.association.partnershipChannel,
         partnerCommissionCents: ctx.association.partnerCommissionCents,
@@ -179,6 +191,7 @@ export function buildB2bOrderCreateData(
     | 'agencyCode'
     | 'agencyName'
     | 'masterPartnerId'
+    | 'referralPartnerId'
     | 'apiCredentialId'
     | 'partnershipChannel'
     | 'partnerCommissionCents'
@@ -192,6 +205,7 @@ export function buildB2bOrderCreateData(
         agencyCode: association.agencyCode,
         agencyName: association.agencyName,
         masterPartnerId: association.masterPartnerId,
+        referralPartnerId: association.referralPartnerId,
         apiCredentialId: association.apiCredentialId,
         partnershipChannel: association.partnershipChannel,
         partnerCommissionCents: association.partnerCommissionCents,

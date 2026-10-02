@@ -34,6 +34,7 @@ function pickLatestOrderDates<T extends { deceasedBirthDate: Date | null; deceas
 /** Tabella leader: profili registrati + righe orfane da ordini senza DeceasedProfile. */
 export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
     const profiles = await prisma.deceasedProfile.findMany({
+        where: { deletedAt: null },
         include: {
             orders: {
                 where: visibleDashboardOrdersWhere(),

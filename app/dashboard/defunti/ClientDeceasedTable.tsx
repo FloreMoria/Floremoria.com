@@ -50,7 +50,7 @@ export default function ClientDeceasedTable({
 
     const handleAutoMerge = async () => {
         const ok = window.confirm(
-            'Avviare la deduplicazione automatica dei profili omonimi (es. "Santo Sancono", "Tusa Salvatore") e dei relativi ordini?'
+            'Avviare la deduplicazione automatica dei profili duplicati e il recupero degli ordini storici?'
         );
         if (!ok) return;
 
@@ -66,10 +66,23 @@ export default function ClientDeceasedTable({
                 throw new Error(data.error || 'Errore durante la deduplicazione.');
             }
 
-            if (data.clustersMergedCount > 0) {
-                showToast(`✅ Uniti con successo ${data.clustersMergedCount} cluster omonimi duplicati!`);
+            if (data.clustersMergedCount > 0 || data.autoLinkedOrdersCount > 0) {
+                showToast(
+                    `✅ Completato: ${data.clustersMergedCount || 0} gruppi unificati, ${data.totalMergedProfiles || 0} profili accorpati, ${data.autoLinkedOrdersCount || 0} ordini collegati!`
+                );
             } else {
-                showToast('Nessun profilo omonimo duplicato da unire.');
+                showToast('Nessun profilo duplicato rilevato.');
+            }
+
+            // Aggiornamento immediato tabella
+            try {
+                const freshRes = await fetch('/api/dashboard/defunti');
+                const freshData = await freshRes.json();
+                if (freshData.ok && freshData.rows) {
+                    setRows(freshData.rows);
+                }
+            } catch {
+                // fallback a router.refresh()
             }
             router.refresh();
         } catch (err) {

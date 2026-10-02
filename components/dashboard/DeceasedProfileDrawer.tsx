@@ -469,12 +469,17 @@ export default function DeceasedProfileDrawer({
                             id: detail.deceasedProfileId,
                             fullName: displayName,
                             cemeteryCity: detail.cemeteryCity || detail.city || '',
+                            birthDate: detail.birthDate,
+                            deathDate: detail.deathDate,
                         }}
                         allProfiles={allProfilesList.map((p) => ({
                             id: p.deceasedProfileId || p.id,
                             fullName: p.fullName,
                             cemeteryCity: p.cemeteryCity,
-                            orders: p.orders || [],
+                            cemeteryName: p.cemeteryName,
+                            birthDate: p.birthDate,
+                            deathDate: p.deathDate,
+                            orderCount: p.orderCount ?? p.orders?.length ?? 0,
                         }))}
                         onClose={() => setMergeModalOpen(false)}
                         onSuccess={() => {

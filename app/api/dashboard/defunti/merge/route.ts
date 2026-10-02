@@ -3,13 +3,18 @@
  * Endpoint per lanciare l'unione sicura ed il recupero asset dei profili defunto duplicati.
  *
  * Supporta:
- * 1. autoScan: true -> Scansione automatica per unire tutti i profili omonimi duplicati e i relativi ordini.
+ * 1. autoScan: true -> Scansione automatica per unire tutti i profili duplicati e i relativi ordini (rispettando le omonimie).
  * 2. masterProfileId + duplicateProfileIds -> Merge mirato di uno o più profili selezionati da UI.
  */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { mergeDeceasedProfiles, areNamesEquivalent } from '@/lib/deceased/mergeDeceasedProfiles';
+import {
+    mergeDeceasedProfiles,
+    areNamesEquivalent,
+    canProfilesBeMerged,
+    calculateMasterProfileScore,
+} from '@/lib/deceased/mergeDeceasedProfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,7 +26,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const isAutoScan = Boolean(body.autoScan);
 
         if (isAutoScan) {
-            // 1. Collega ordini orfani a profili defunto se il nome corrisponde
+            // 1. Collega ordini orfani a profili defunto attivi se il nome corrisponde e le date/città sono compatibili
             const unlinkedOrders = await prisma.order.findMany({
                 where: { deceasedProfileId: null, deletedAt: null },
             });
@@ -30,22 +35,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 where: { deletedAt: null },
             });
 
+            let autoLinkedOrdersCount = 0;
             for (const ord of unlinkedOrders) {
                 if (!ord.deceasedName) continue;
-                const match = allProfiles.find((p) => areNamesEquivalent(p.fullName, ord.deceasedName));
+                const match = allProfiles.find((p) => {
+                    const check = canProfilesBeMerged(
+                        {
+                            fullName: p.fullName,
+                            birthDate: p.birthDate,
+                            deathDate: p.deathDate,
+                            cemeteryCity: p.cemeteryCity,
+                        },
+                        {
+                            fullName: ord.deceasedName,
+                            birthDate: ord.deceasedBirthDate,
+                            deathDate: ord.deceasedDeathDate,
+                            cemeteryCity: ord.cemeteryCity,
+                        },
+                        { checkCity: false }
+                    );
+                    return check.canMerge;
+                });
+
                 if (match) {
                     await prisma.order.update({
                         where: { id: ord.id },
                         data: { deceasedProfileId: match.id },
                     });
+                    autoLinkedOrdersCount++;
                 }
             }
 
-            // 2. Raggruppa i profili per nome omologo
+            // 2. Recupera i profili attivi e raggruppali in cluster secondo le regole di omonimia
             const freshProfiles = await prisma.deceasedProfile.findMany({
                 where: { deletedAt: null },
                 include: {
-                    orders: { select: { id: true } },
+                    orders: {
+                        where: { deletedAt: null },
+                        select: { id: true },
+                    },
                 },
                 orderBy: { createdAt: 'asc' },
             });
@@ -55,7 +83,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             for (const prof of freshProfiles) {
                 let foundCluster = false;
                 for (const cluster of clusters) {
-                    if (areNamesEquivalent(cluster[0].fullName, prof.fullName)) {
+                    // Un profilo entra nel cluster solo se compatibile con il capogruppo (stesso nome e date NON discordanti)
+                    const check = canProfilesBeMerged(cluster[0], prof, { checkCity: false });
+                    if (check.canMerge) {
                         cluster.push(prof);
                         foundCluster = true;
                         break;
@@ -68,12 +98,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
             let clustersMergedCount = 0;
             let totalMergedProfiles = 0;
+            let totalReassignedOrders = 0;
+            const mergeDetails: any[] = [];
 
             for (const group of clusters) {
                 if (group.length > 1) {
+                    // Ordina il gruppo per selezionare il Master (più ordini, più foto, anagrafica più completa)
                     const sortedGroup = [...group].sort((a, b) => {
-                        const scoreA = (a.orders?.length || 0) * 10 + (a.deliveryPhotoUrls?.length || 0);
-                        const scoreB = (b.orders?.length || 0) * 10 + (b.deliveryPhotoUrls?.length || 0);
+                        const scoreA = calculateMasterProfileScore(a);
+                        const scoreB = calculateMasterProfileScore(b);
                         if (scoreB !== scoreA) return scoreB - scoreA;
                         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
                     });
@@ -85,6 +118,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     if (res.ok) {
                         clustersMergedCount++;
                         totalMergedProfiles += res.mergedProfileIds.length;
+                        totalReassignedOrders += res.reassignedOrdersCount;
+                        mergeDetails.push({
+                            masterId: master.id,
+                            masterFullName: master.fullName,
+                            mergedCount: res.mergedProfileIds.length,
+                        });
                     }
                 }
             }
@@ -94,10 +133,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 success: true,
                 clustersMergedCount,
                 totalMergedProfiles,
+                autoLinkedOrdersCount,
+                totalReassignedOrders,
+                mergeDetails,
             });
         }
 
-        // Merge mirato da UI
+        // Merge mirato da UI (Drawer / Modal)
         const masterProfileId = (body.masterProfileId || body.masterId || '').trim();
         const rawDuplicates = body.duplicateProfileIds || body.duplicateIds || [];
         const duplicateProfileIds = Array.isArray(rawDuplicates) ? rawDuplicates : [];
@@ -141,3 +183,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
     }
 }
+

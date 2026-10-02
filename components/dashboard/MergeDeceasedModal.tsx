@@ -5,10 +5,36 @@ import { X, Search, GitMerge, CheckCircle2, Loader2, User, AlertTriangle } from 
 
 interface MergeDeceasedModalProps {
     isOpen: boolean;
-    masterProfile: { id: string; fullName: string; cemeteryCity?: string };
-    allProfiles: { id: string; fullName: string; cemeteryCity?: string; orders?: any[]; deliveryPhotoUrls?: string[] }[];
+    masterProfile: {
+        id: string;
+        fullName: string;
+        cemeteryCity?: string;
+        birthDate?: string | null;
+        deathDate?: string | null;
+    };
+    allProfiles: {
+        id: string;
+        fullName: string;
+        cemeteryCity?: string;
+        cemeteryName?: string | null;
+        birthDate?: string | null;
+        deathDate?: string | null;
+        orders?: any[];
+        orderCount?: number;
+    }[];
     onClose: () => void;
     onSuccess: (result: any) => void;
+}
+
+function formatYearOrDate(iso?: string | null): string {
+    if (!iso) return '';
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('it-IT');
+    } catch {
+        return '';
+    }
 }
 
 export default function MergeDeceasedModal({
@@ -33,7 +59,8 @@ export default function MergeDeceasedModal({
         const q = searchQuery.toLowerCase();
         return (
             p.fullName.toLowerCase().includes(q) ||
-            (p.cemeteryCity && p.cemeteryCity.toLowerCase().includes(q))
+            (p.cemeteryCity && p.cemeteryCity.toLowerCase().includes(q)) ||
+            (p.cemeteryName && p.cemeteryName.toLowerCase().includes(q))
         );
     });
 
@@ -82,6 +109,12 @@ export default function MergeDeceasedModal({
         }
     };
 
+    const masterBirth = formatYearOrDate(masterProfile.birthDate);
+    const masterDeath = formatYearOrDate(masterProfile.deathDate);
+    const masterDates = [masterBirth && `Nascita: ${masterBirth}`, masterDeath && `Morte: ${masterDeath}`]
+        .filter(Boolean)
+        .join(' · ');
+
     return (
         <div
             className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -103,6 +136,7 @@ export default function MergeDeceasedModal({
                             </h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Profilo Master: <span className="font-bold text-slate-800 dark:text-slate-200">{masterProfile.fullName}</span>
+                                {masterDates ? ` (${masterDates})` : ''}
                             </p>
                         </div>
                     </div>
@@ -121,7 +155,7 @@ export default function MergeDeceasedModal({
                         <div>
                             <p className="font-semibold">Nessun dato andrà perso.</p>
                             <p className="mt-0.5 text-amber-800 dark:text-amber-300">
-                                Gli ordini, le foto di garanzia e le memorie del Giardino verranno trasferiti su <strong>{masterProfile.fullName}</strong>. I profili duplicati verranno archiviati mantenendo la tracciabilità storica.
+                                Gli ordini, le foto di garanzia e le date commemorative verranno trasferiti su <strong>{masterProfile.fullName}</strong>. I profili duplicati verranno archiviati in sicurezza (soft-delete).
                             </p>
                         </div>
                     </div>
@@ -147,6 +181,13 @@ export default function MergeDeceasedModal({
                         ) : (
                             filteredProfiles.map((p) => {
                                 const isSelected = selectedDupIds.includes(p.id);
+                                const birthStr = formatYearOrDate(p.birthDate);
+                                const deathStr = formatYearOrDate(p.deathDate);
+                                const datesLabel = [birthStr && `*${birthStr}`, deathStr && `+${deathStr}`]
+                                    .filter(Boolean)
+                                    .join(' ');
+                                const ordersCount = p.orderCount ?? p.orders?.length ?? 0;
+
                                 return (
                                     <div
                                         key={p.id}
@@ -166,7 +207,9 @@ export default function MergeDeceasedModal({
                                                     {p.fullName}
                                                 </div>
                                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                                    {p.cemeteryCity || 'Comune n.d.'} · Ordini: {p.orders?.length || 0}
+                                                    {p.cemeteryCity || 'Comune n.d.'}
+                                                    {datesLabel ? ` · ${datesLabel}` : ''}
+                                                    {` · Ordini: ${ordersCount}`}
                                                 </div>
                                             </div>
                                         </div>
@@ -233,3 +276,4 @@ export default function MergeDeceasedModal({
         </div>
     );
 }
+

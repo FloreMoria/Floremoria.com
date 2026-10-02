@@ -52,6 +52,7 @@ export async function findMatchingDeceasedProfile(
         FROM "DeceasedProfile"
         WHERE LOWER(REGEXP_REPLACE(TRIM("fullName"), '\\s+', ' ', 'g')) = ${nameKey}
           AND LOWER(REGEXP_REPLACE(TRIM("cemeteryCity"), '\\s+', ' ', 'g')) = ${cityKey}
+          AND "deletedAt" IS NULL
         ORDER BY "createdAt" ASC
         LIMIT 1
     `;

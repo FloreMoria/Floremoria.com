@@ -4,6 +4,23 @@ import {
     createDeceasedManual,
     registerOrphanDeceasedFromSeedOrder,
 } from '@/lib/deceased/registerOrphanDeceased';
+import { listDeceasedLeaderRows } from '@/lib/deceased/listDeceasedLeaderRows';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const rows = await listDeceasedLeaderRows();
+        return NextResponse.json({ ok: true, rows });
+    } catch (error) {
+        console.error('[defunti GET]', error);
+        const message = error instanceof Error ? error.message : 'Errore interno.';
+        return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    }
+}
 
 export async function POST(request: Request) {
     const auth = await requireDashboardAdmin();
@@ -39,3 +56,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: message }, { status: 400 });
     }
 }
+
